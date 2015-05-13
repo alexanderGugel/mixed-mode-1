@@ -32,7 +32,45 @@
  */
 function Transform () {
     this._matrix = new Float32Array(16);
+    this._transforms = [];
+    this._paths = [];
 }
+
+Transform.IDENT = [ 1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1 ];
+
+function depth (path) {
+    var count = 0;
+    var length = path.length;
+    var len = path[length - 1] === '/' ? length - 1 : length;
+    for (var i = 0 ; i < len ; i++)
+        count += path[i] === '/' ? 1 : 0;
+    return count;
+}
+
+function toParent (path) {
+    
+    
+
+
+Transform.prototype.registerTransformAtPath = function registerTransformAtPath (path) {
+    var index = this._paths.indexOf(path);
+    if (index === -1) {
+        var i = 0;
+        var len = this._paths.length;
+        var targetDepth = depth(path);
+        while (i < len && depth(this._paths[i]) < targetDepth) i++;
+        this._paths.splice(i, 0, path);
+        this._transforms.splice(i, 0, {
+            transform: new Float32Array(Transform.IDENT),
+            parent: 
+        });
+    }
+}
+        
+        
 
 /**
  * Returns the last calculated transform
@@ -41,6 +79,96 @@ function Transform () {
  */
 Transform.prototype.get = function get () {
     return this._matrix;
+};
+
+/**
+ * Creates a transformation matrix from a Node's spec.
+ *
+ * @method fromSpec
+ * 
+ * @param {Node.Spec} spec of the node
+ * @param {Array} size of the node
+ * @param {Array} size of the node's parent
+ * @param {Array} target array to write the matrix to
+ * 
+ * @return {Boolean} whether or not the target array was changed
+ */
+Transform.prototype.fromSpec = function fromSpec (spec, mySize, parentSize, target) {
+    target = target ? target : this._matrix;
+    var changed = target ? false : true;
+
+    var t00         = target[0];
+    var t01         = target[1];
+    var t02         = target[2];
+    var t10         = target[4];
+    var t11         = target[5];
+    var t12         = target[6];
+    var t20         = target[8];
+    var t21         = target[9];
+    var t22         = target[10];
+    var t30         = target[12];
+    var t31         = target[13];
+    var t32         = target[14];
+    var posX        = spec.vectors.position[0];
+    var posY        = spec.vectors.position[1];
+    var posZ        = spec.vectors.position[2];
+    var rotX        = spec.vectors.rotation[0];
+    var rotY        = spec.vectors.rotation[1];
+    var rotZ        = spec.vectors.rotation[2];
+    var rotW        = spec.vectors.rotation[3];
+    var scaleX      = spec.vectors.scale[0];
+    var scaleY      = spec.vectors.scale[1];
+    var scaleZ      = spec.vectors.scale[2];
+    var alignX      = spec.offsets.align[0] * parentSize[0];
+    var alignY      = spec.offsets.align[1] * parentSize[1];
+    var alignZ      = spec.offsets.align[2] * parentSize[2];
+    var mountPointX = spec.offsets.mountPoint[0] * mySize[0];
+    var mountPointY = spec.offsets.mountPoint[1] * mySize[1];
+    var mountPointZ = spec.offsets.mountPoint[2] * mySize[2];
+    var originX     = spec.offsets.origin[0] * mySize[0];
+    var originY     = spec.offsets.origin[1] * mySize[1];
+    var originZ     = spec.offsets.origin[2] * mySize[2];
+
+    var wx = rotW * rotX;
+    var wy = rotW * rotY;
+    var wz = rotW * rotZ;
+    var xx = rotX * rotX;
+    var yy = rotY * rotY;
+    var zz = rotZ * rotZ;
+    var xy = rotX * rotY;
+    var xz = rotX * rotZ;
+    var yz = rotY * rotZ;
+
+    target[0] = (1 - 2 * (yy + zz)) * scaleX;
+    target[1] = (2 * (xy + wz)) * scaleX;
+    target[2] = (2 * (xz - wy)) * scaleX;
+    target[3] = 0;
+    target[4] = (2 * (xy - wz)) * scaleY;
+    target[5] = (1 - 2 * (xx + zz)) * scaleY;
+    target[6] = (2 * (yz + wx)) * scaleY;
+    target[7] = 0;
+    target[8] = (2 * (xz + wy)) * scaleZ;
+    target[9] = (2 * (yz - wx)) * scaleZ;
+    target[10] = (1 - 2 * (xx + yy)) * scaleZ;
+    target[11] = 0;
+    target[12] = alignX + posX - mountPointX + originX - (rs0 * originX + rs3 * originY + rs6 * originZ);
+    target[13] = alignY + posY - mountPointY + originY - (rs1 * originX + rs4 * originY + rs7 * originZ);
+    target[14] = alignZ + posZ - mountPointZ + originZ - (rs2 * originX + rs5 * originY + rs8 * originZ);
+    target[15] = 0;
+
+    return changed 
+        || t00 !== target[0]
+        || t01 !== target[1]
+        || t02 !== target[2]
+        || t10 !== target[4]
+        || t11 !== target[5]
+        || t12 !== target[6]
+        || t20 !== target[8]
+        || t21 !== target[9]
+        || t22 !== target[10]
+        || t30 !== target[12]
+        || t31 !== target[13]
+        || t32 !== target[14];
 };
 
 /**
@@ -57,6 +185,7 @@ Transform.prototype.get = function get () {
  */
 Transform.prototype.fromSpecWithParent = function fromSpecWithParent (parentMatrix, spec, mySize, parentSize, target) {
     target = target ? target : this._matrix;
+    var changed = target ? false : true;
 
     // local cache of everything
     var t00         = target[0];
@@ -144,19 +273,19 @@ Transform.prototype.fromSpecWithParent = function fromSpecWithParent (parentMatr
     target[14] = p02 * tx + p12 * ty + p22 * tz + p32;
     target[15] = 1;
 
-    return t00 !== target[0] ||
-        t01 !== target[1] ||
-        t02 !== target[2] ||
-        t10 !== target[4] ||
-        t11 !== target[5] ||
-        t12 !== target[6] ||
-        t20 !== target[8] ||
-        t21 !== target[9] ||
-        t22 !== target[10] ||
-        t30 !== target[12] ||
-        t31 !== target[13] ||
-        t32 !== target[14];
-
+    return changed 
+        || t00 !== target[0]
+        || t01 !== target[1]
+        || t02 !== target[2]
+        || t10 !== target[4]
+        || t11 !== target[5]
+        || t12 !== target[6]
+        || t20 !== target[8]
+        || t21 !== target[9]
+        || t22 !== target[10]
+        || t30 !== target[12]
+        || t31 !== target[13]
+        || t32 !== target[14];
 };
 
 module.exports = Transform;
