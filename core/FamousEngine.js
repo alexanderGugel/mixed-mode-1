@@ -27,6 +27,7 @@
 var Clock = require('./Clock');
 var Scene = require('./Scene');
 var Channel = require('./Channel');
+var Dispatch = require('./Dispatch');
 var UIManager = require('../renderers/UIManager');
 var Compositor = require('../renderers/Compositor');
 var Engine = require('../engine/Engine');
@@ -212,7 +213,7 @@ FamousEngine.prototype.handleWith = function handleWith (messages) {
             var type = messages.shift();
             var ev = messages.shift();
 
-            this.getContext(path).getDispatch().dispatchUIEvent(path, type, ev);
+            Dispatch.dispatchUIEvent(path, type, ev);
             break;
         default:
             throw new Error('received unknown command: ' + command);

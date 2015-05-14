@@ -353,5 +353,5 @@ function _splitTo (string, target) {
     return target;
 }
 
-module.exports = Dispatch;
+module.exports = new Dispatch();
 
