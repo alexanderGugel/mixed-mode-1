@@ -23,22 +23,28 @@ PathUtils.prototype.index = function index (path) {
 };
 
 PathUtils.prototype.indexAtDepth = function indexAtDepth (path, depth) {
-    if (!depth) {
-        var index = path.indexOf('/');
-        return index === -1 ? path : path.substring(0, index);
-    }
-    for (var i = 0, len = path.length ; i < len ; i++) {
+    var i = 0;
+    var len = path.length;
+    for (; i < len ; i++) {
         depth -= path[i] === '/' ? 1 : 0;
         if (!depth) {
-            var result = '';
-            while (path[++i] !== '/' && path[i]) result += path[i];
-            return parseInt(result);
+            var index = path.indexOf(i, '/');
+            var result = index === -1 ? path.substring(i) : path.substring(i, index);
+            var num = parseInt(result);
+            return isNaN(num) ? result : num;
         }
     }
 };
 
 PathUtils.prototype.parent = function parent (path) {
-    
+    return path.substring(0, path.lastIndexOf('/', path.length - 2));
+};
+
+PathUtils.prototype.isChildOf = function isChildOf(child, parent) {
+    child = this.hasTrailingSlash(child) ? child : child + '/';
+    parent = this.hasTrailingSlash(parent) ? parent : parent + '/';
+    return child.indexOf(parent) !== -1;
+};
 
 module.exports = new PathUtils();
-    
+

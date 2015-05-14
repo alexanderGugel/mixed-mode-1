@@ -24,6 +24,8 @@
 
 'use strict';
 
+var pathUtils = require('./Path');
+
 /**
  * The transform class is responsible for calculating the transform of a particular
  * node from the data on the node and its parent
@@ -41,36 +43,39 @@ Transform.IDENT = [ 1, 0, 0, 0,
                     0, 0, 1, 0,
                     0, 0, 0, 1 ];
 
-function depth (path) {
-    var count = 0;
-    var length = path.length;
-    var len = path[length - 1] === '/' ? length - 1 : length;
-    for (var i = 0 ; i < len ; i++)
-        count += path[i] === '/' ? 1 : 0;
-    return count;
-}
+Transform.DEFAULT_OPTIONS = {
+    transform: Transform.IDENT,
+    breakPoint: false,
+    needsWorld: false
+};
 
-function toParent (path) {
-    
-    
-
-
-Transform.prototype.registerTransformAtPath = function registerTransformAtPath (path) {
+Transform.prototype.registerTransformAtPath = function registerTransformAtPath (path, options) {
     var index = this._paths.indexOf(path);
     if (index === -1) {
+        options = options ? options : Transform.DEFAULT_OPTIONS;
         var i = 0;
         var len = this._paths.length;
         var targetDepth = depth(path);
         while (i < len && depth(this._paths[i]) < targetDepth) i++;
         this._paths.splice(i, 0, path);
         this._transforms.splice(i, 0, {
-            transform: new Float32Array(Transform.IDENT),
-            parent: 
+            transform: new Float32Array(options.transform ? options.transform : Transform.IDENT),
+            parent: this._transforms[this._paths.indexOf(pathUtils.parent(path))],
+            breakPoint: options.breakPoint != null ? options.breakPoint : false,
+            needsWorld: options.needsWorld != null ? options.breakPoint : false
         });
     }
-}
-        
-        
+};
+
+Transform.prototype.evaluate = function evaluate () {
+    var parent;
+    var target;
+    for (var i = 0, len = this._transforms.length ; i < len ; i++) {
+        target = this._transform[i];
+        parent = !target.parent ? Transform.DEFAULT_OPTIONS : target.parent;
+
+
+
 
 /**
  * Returns the last calculated transform
