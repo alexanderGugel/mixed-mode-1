@@ -28,6 +28,7 @@
 
 var Transform = require('./Transform');
 var Size = require('./Size');
+var Dispatch = require('./Dispatch');
 
 var TRANSFORM_PROCESSOR = new Transform();
 var SIZE_PROCESSOR = new Size();
@@ -484,9 +485,8 @@ Node.prototype.removeChild = function removeChild (child) {
  
         child.dismount();
 
+        return true;
     } else throw new Error('Node is not a child of this node');
-
-    return added;
 };
 
 /**
@@ -1158,7 +1158,7 @@ Node.prototype.onMount = function onMount (parent, path) {
 
     this._parent = parent;
     this._globalUpdater = parent.getUpdater();
-    this.value.location = myId;
+    this.value.location = path;
     this.value.showState.mounted = true;
 
     for (; i < len ; i++) {
