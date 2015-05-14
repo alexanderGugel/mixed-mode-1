@@ -40,10 +40,12 @@ var Event = require('./Event');
 function Dispatch (context) {
 
     if (!context) throw new Error('Dispatch needs to be instantiated on a node');
-    
+
     this._context = context; // A reference to the context
                              // on which the dispatcher
                              // operates
+
+    this._nodes = {}; // a container for constant time lookup of nodes
 
     this._queue = []; // The queue is used for two purposes
                       // 1. It is used to list indicies in the

@@ -466,11 +466,8 @@ Node.prototype.addChild = function addChild (child) {
         index = this._freedChildIndicies.length ? this._freedChildIndicies.pop() : this._children.length;
         this._children[index] = child;
 
-        if (this.isMounted() && child.onMount) {
-            var myId = this.getId();
-            var childId = myId + '/' + index;
-            child.onMount(this, childId);
-        }
+        if (this.isMounted() && child.onMount)
+            child.onMount(this, cthis.getId() + '/' + index);
 
     }
 
