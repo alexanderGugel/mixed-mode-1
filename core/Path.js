@@ -46,5 +46,10 @@ PathUtils.prototype.isChildOf = function isChildOf(child, parent) {
     return child.indexOf(parent) !== -1;
 };
 
+PathUtils.prototype.getSelector = function getSelector(path) {
+    var index = path.indexOf('/');
+    return index === -1 ? path : path.substring(0, index);
+};
+
 module.exports = new PathUtils();
 
