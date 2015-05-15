@@ -16,6 +16,9 @@
     -webkit-tap-highlight-color: transparent;
     pointer-events: auto;
     z-index: 1;
+    box-sizing: border-box;
+    -moz-box-sizing: border-box;
+    -webkit-box-sizing: border-box;
 }
 
 .famous-webgl-renderer {

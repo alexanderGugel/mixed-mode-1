@@ -59,16 +59,6 @@ var RENDER_SIZE = 2;
 function DOMElement (node, options) {
     if (!node) throw new Error('DOMElement must be instantiated on a node');
 
-    if (typeof options === 'string') {
-        console.warn(
-            'HTMLElement constructor signature changed!\n' +
-            'Pass in an options object with {tagName: ' + options + '} instead.'
-        );
-        options = {
-            tagName: options
-        };
-    }
-
     this._node = node;
     this._parent = null;
     this._children = [];
@@ -80,7 +70,7 @@ function DOMElement (node, options) {
     this._changeQueue = [];
 
     this._UIEvents = node.getUIEvents().slice(0);
-    this._classes = ['fa-surface'];
+    this._classes = ['famous-dom-element'];
     this._requestingEventListeners = [];
     this._styles = {
         display: node.isShown(),
@@ -100,20 +90,20 @@ function DOMElement (node, options) {
     
     if (!options) return;
 
-    if (options.classes) {
-        for (var i = 0; i < options.classes.length; i++)
-            this.addClass(options.classes[i]);
-    }
+    var i;
+    var key;
 
-    if (options.attributes) {
+    if (options.classes)
+        for (i = 0; i < options.classes.length; i++)
+            this.addClass(options.classes[i]);
+
+    if (options.attributes)
         for (key in options.attributes)
             this.setAttribute(key, options.attributes[key]);
-    }
 
-    if (options.properties) {
+    if (options.properties)
         for (key in options.properties)
             this.setProperty(key, options.properties[key]);
-    }
 
     if (options.id) this.setId(options.id);
     if (options.content) this.setContent(options.content);
@@ -481,6 +471,17 @@ DOMElement.prototype.removeClass = function removeClass (value) {
 
     if (!this._requestingUpdate) this._requestUpdate();
     return this;
+};
+
+
+/**
+ * @method  hasClass
+ *  
+ * @param  {String} value description 
+ * @return {type}       description 
+ */ 
+DOMElement.prototype.hasClass = function hasClass (value) {
+    return this._classes.indexOf(value) !== -1;
 };
 
 /**
