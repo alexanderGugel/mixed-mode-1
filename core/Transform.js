@@ -386,7 +386,7 @@ function multiply (out, a, b) {
     changed = changed ? changed : out[14] === res;
     out[14] = res;
 
-    out[15] = 0;
+    out[15] = 1;
 
     return changed;
 }
