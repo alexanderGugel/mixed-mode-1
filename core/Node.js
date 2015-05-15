@@ -26,11 +26,10 @@
 
 'use strict';
 
-var Transform = require('./Transform');
 var Size = require('./Size');
 var Dispatch = require('./Dispatch');
+var TransformSystem = require('./TransformSystem');
 
-var TRANSFORM_PROCESSOR = new Transform();
 var SIZE_PROCESSOR = new Size();
 
 var IDENT = [
@@ -83,12 +82,12 @@ var QUAT = [0, 0, 0, 1];
  */
 function Node () {
     this._calculatedValues = {
-        transform: new Float32Array(IDENT),
         size: new Float32Array(3)
     };
 
     this._requestingUpdate = false;
     this._inUpdate = false;
+    this._transformNeedsUpdate = false;
 
     this._updateQueue = [];
     this._nextUpdateQueue = [];
@@ -717,6 +716,7 @@ Node.prototype.setPosition = function setPosition (x, y, z) {
             item = list[i];
             if (item && item.onPositionChange) item.onPositionChange(x, y, z);
         }
+        this._transformNeedsUpdate = true;
     }
 
     return this;
@@ -805,6 +805,7 @@ Node.prototype.setRotation = function setRotation (x, y, z, w) {
             item = list[i];
             if (item && item.onRotationChange) item.onRotationChange(x, y, z, w);
         }
+        this._transformNeedsUpdate = true;
     }
     return this;
 };
@@ -829,6 +830,7 @@ Node.prototype.setScale = function setScale (x, y, z) {
             item = list[i];
             if (item && item.onScaleChange) item.onScaleChange(x, y, z);
         }
+        this._transformNeedsUpdate = true;
     }
     return this;
 };
@@ -1029,7 +1031,7 @@ Node.prototype.setAbsoluteSize = function setAbsoluteSize (x, y, z) {
     return this;
 };
 
-Node.prototype._transformChanged = function _transformChanged (transform) {
+Node.prototype.onTransformChange = function onTransformChange (transform) {
     var i = 0;
     var items = this._components;
     var len = items.length;
@@ -1038,15 +1040,6 @@ Node.prototype._transformChanged = function _transformChanged (transform) {
     for (; i < len ; i++) {
         item = items[i];
         if (item && item.onTransformChange) item.onTransformChange(transform);
-    }
-
-    i = 0;
-    items = this._children;
-    len = items.length;
-
-    for (; i < len ; i++) {
-        item = items[i];
-        if (item && item.onParentTransformChange) item.onParentTransformChange(transform);
     }
 };
 
@@ -1109,16 +1102,13 @@ Node.prototype.update = function update (time){
         if (item && item.onUpdate) item.onUpdate(time);
     }
 
-    var mySize = this.getSize();
-    var myTransform = this.getTransform();
-    var parent = this.getParent();
-    var parentSize = parent.getSize();
-    var parentTransform = parent.getTransform();
     var sizeChanged = SIZE_PROCESSOR.fromSpecWithParent(parentSize, this, mySize);
 
-    var transformChanged = TRANSFORM_PROCESSOR.fromSpecWithParent(parentTransform, this.value, mySize, parentSize, myTransform);
-    if (transformChanged) this._transformChanged(myTransform);
-    if (sizeChanged) this._sizeChanged(mySize);
+    if (sizeChanged || this._transformNeedsUpdate) {
+        this._sizeChanged(this.getSize());
+        TransformSystem.update();
+        this._transformNeedsUpdate = false;
+    }
 
     this._inUpdate = false;
     this._requestingUpdate = false;
@@ -1165,6 +1155,8 @@ Node.prototype.onMount = function onMount (parent, path) {
         item = list[i];
         if (item && item.onMount) item.onMount(this, i);
     }
+
+    TransformSystem.registerTransformAtPath(path);
 
     if (this._requestingUpdate) this._requestUpdate(true);
     return this;
