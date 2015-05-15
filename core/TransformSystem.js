@@ -26,7 +26,7 @@
 
 var PathUtils = require('./Path');
 var Transform = require('./Transform');
-var FamousEngine = require('./FamousEngine');
+var Dispatch = require('./Dispatch');
 
 /**
  * The transform class is responsible for calculating the transform of a particular
@@ -48,7 +48,6 @@ function TransformSystem () {
  */
 TransformSystem.prototype._requestUpdate = function _requestUpdate () {
     if (!this._requestingUpdate) {
-        FamousEngine.requestUpdate(this);
         this._requestingUpdate = true;
     }
 };
@@ -78,7 +77,7 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
     ) i++;
     paths.splice(i, 0, path);
     var newTransform = new Transform();
-    newTransform.setParent(paths[paths.indexOf(PathUtils.parent(path))]);
+    newTransform.setParent(this._transforms[paths.indexOf(PathUtils.parent(path))]);
     this._transforms.splice(i, 0, newTransform);
     if (!this._requestingUpdate) this._requestUpdate();
 };
@@ -96,8 +95,24 @@ TransformSystem.prototype.deregisterTransformAtPath = function deregisterTransfo
     var index = paths.indexOf(path);
     if (index === -1) throw new Error('No transform Registered at path: ' + path);
 
-    this._transforms.splice(index, 1);
+    this._transforms.splice(index, 1)[0].reset();
     this._paths.splice(index, 1);
+};
+
+
+TransformSystem.prototype.makeBreakPointAt = function makeBreakPointAt (path) {
+    var paths = this._paths;
+    var index = paths.indexOf(path);
+    if (index === -1) throw new Error('No transform Registered at path: ' + path);
+
+    var transform = this._transforms[index];
+    transform.setBreakPoint();
+};
+
+
+
+TransformSystem.prototype.get = function get (path) {
+    return this._transforms[this._paths.indexOf(path)];
 };
 
 /**
@@ -121,6 +136,7 @@ TransformSystem.prototype.update = function update () {
 TransformSystem.prototype.onUpdate = function onUpdate () {
     var transforms = this._transforms;
     var paths = this._paths;
+    var transform;
     var changed;
     var node;
 
@@ -129,7 +145,7 @@ TransformSystem.prototype.onUpdate = function onUpdate () {
         if (!node) continue;
         transform = transforms[i];
         if (transform.from(node) && node.onTransformChange)
-            node.onTransformChange(transform.transform);
+            node.onTransformChange(transform);
     }
 };
 
@@ -343,4 +359,4 @@ TransformSystem.prototype.fromSpecWithParent = function fromSpecWithParent (pare
         t32 !== target[14];
 };
 
-module.exports = TransformSystem;
+module.exports = new TransformSystem();

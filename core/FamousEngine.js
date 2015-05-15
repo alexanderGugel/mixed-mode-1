@@ -31,6 +31,7 @@ var Dispatch = require('./Dispatch');
 var UIManager = require('../renderers/UIManager');
 var Compositor = require('../renderers/Compositor');
 var Engine = require('../engine/Engine');
+var TransformSystem = require('./TransformSystem');
 
 var ENGINE_START = ['ENGINE', 'START'];
 var ENGINE_STOP = ['ENGINE', 'STOP'];
@@ -126,6 +127,8 @@ FamousEngine.prototype._update = function _update () {
         item = queue.shift();
         if (item && item.onUpdate) item.onUpdate(time);
     }
+
+    TransformSystem.onUpdate();
 
     this._inUpdate = false;
 };
@@ -255,7 +258,7 @@ FamousEngine.prototype.step = function step (time) {
 
     if (this._messages.length) {
         this._channel.sendMessage(this._messages);
-        this._messages.length = 2;
+        while (this._messages.length > 2) this._messages.pop();
     }
 
     return this;

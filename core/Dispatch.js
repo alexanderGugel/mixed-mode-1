@@ -35,9 +35,7 @@ var PathUtils = require('./Path');
  *
  * @param {Context} Context on which it operates
  */
-function Dispatch (context) {
-
-    if (!context) throw new Error('Dispatch needs to be instantiated on a node');
+function Dispatch () {
 
     this._nodes = {}; // a container for constant time lookup of nodes
 
@@ -63,7 +61,7 @@ function Dispatch (context) {
 Dispatch.prototype.registerNodeAtPath = function registerNodeAtPath (path, node) {
     if (this._nodes[path]) throw new Error('Node already defined at path: ' + path);
     this._nodes[path] = node;
-    this.mount(node, path);
+    this.mount(path);
 };
 
 /**
@@ -139,7 +137,10 @@ Dispatch.prototype.breadthFirstNext = function breadthFirstNext () {
  */
 Dispatch.prototype.mount = function mount (path) {
     var node = this._nodes[path];
-    var parent = this._nodes[PathUtils.parent(path)];
+    var parentPath = PathUtils.parent(path);
+
+    // scenes are their own parents
+    var parent = !parentPath ? node : this._nodes[parentPath];
  
     if (!node)
         throw new Error(
@@ -148,7 +149,7 @@ Dispatch.prototype.mount = function mount (path) {
     if (!parent)
         throw new Error(
                 'Parent to path: ' + path + 
-                ' doesn\'t exist at expected path: ' + PathUtils.parent(path)
+                ' doesn\'t exist at expected path: ' + parentPath 
         );
 
     if (node.onMount) node.onMount(parent, path);

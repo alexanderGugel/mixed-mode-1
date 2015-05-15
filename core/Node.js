@@ -451,7 +451,7 @@ Node.prototype.getSize = function getSize () {
 };
 
 Node.prototype.getTransform = function getTransform () {
-    return this._calculatedValues.transform;
+    return TransformSystem.get(this.getLocation());
 };
 
 Node.prototype.getUIEvents = function getUIEvents () {
@@ -582,6 +582,11 @@ Node.prototype._vecOptionalSet = function _vecOptionalSet (vec, index, val) {
 };
 
 Node.prototype.show = function show () {
+    Dispatch.show(this.getLocation());
+    return this;
+};
+
+Node.prototype.onShow = function onShow () {
     var i = 0;
     var items = this._components;
     var len = items.length;
@@ -593,10 +598,6 @@ Node.prototype.show = function show () {
         item = items[i];
         if (item && item.onShow) item.onShow();
     }
-
-    Dispatch.show(this.getLocation());
-
-    return this;
 };
 
 Node.prototype.hide = function hide () {
@@ -1102,10 +1103,11 @@ Node.prototype.update = function update (time){
         if (item && item.onUpdate) item.onUpdate(time);
     }
 
-    var sizeChanged = SIZE_PROCESSOR.fromSpecWithParent(parentSize, this, mySize);
+    var sizeChanged = SIZE_PROCESSOR.fromSpecWithParent(this.getParent().getSize(), this, this.getSize());
+
+    if (sizeChanged) this._sizeChanged(this.getSize());
 
     if (sizeChanged || this._transformNeedsUpdate) {
-        this._sizeChanged(this.getSize());
         TransformSystem.update();
         this._transformNeedsUpdate = false;
     }
@@ -1228,10 +1230,6 @@ Node.prototype.onParentHide = Node.prototype.hide;
 Node.prototype.onParentTransformChange = Node.prototype._requestUpdateWithoutArgs;
 
 Node.prototype.onParentSizeChange = Node.prototype._requestUpdateWithoutArgs;
-
-Node.prototype.onShow = Node.prototype.show;
-
-Node.prototype.onHide = Node.prototype.hide;
 
 Node.prototype.onReceive = Node.prototype.receive;
 

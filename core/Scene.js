@@ -59,8 +59,8 @@ function Scene (selector, updater) {
                                // in the dom that this context
                                // inhabits
 
-    this.onMount(this, selector); // Mount the context to itself
-                                  // (it is its own parent)
+    this.mount(selector); // Mount the context to itself
+                          // (it is its own parent)
     
     this._updater                  // message a request for the dom
         .message('NEED_SIZE_FOR')  // size of the context so that
