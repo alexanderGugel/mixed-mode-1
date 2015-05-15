@@ -37,15 +37,17 @@ function TransformSystem () {
     this._requestingUpdate = false;
     this._transforms = [];
     this._paths = [];
-    this._breakPoints = [];
-    this._worlds = [];
 }
 
-TransformSystem.IDENT = [ 1, 0, 0, 0,
-                          0, 1, 0, 0,
-                          0, 0, 1, 0,
-                          0, 0, 0, 1 ];
-
+/**
+ * registers a new Transform for the given path. This transform will be updated
+ * when the TransformSystem updates.
+ *
+ * @method registerTransformAtPath
+ * @return {void}
+ *
+ * @param {String} path for the transform to be registered to.
+ */
 TransformSystem.prototype.registerTransformAtPath = function registerTransformAtPath (path) {
     var paths = this._paths;
     var index = paths.indexOf(path);
