@@ -83,6 +83,22 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
     if (!this._requestingUpdate) this._requestUpdate();
 };
 
+/**
+ * deregisters a transform registered at the given path.
+ *
+ * @method deregisterTransformAtPath
+ * @return {void}
+ *
+ * @param {String} path at which to register the transform
+ */
+TransformSystem.prototype.deregisterTransformAtPath = function deregisterTransformAtPath (path) {
+    var paths = this._paths;
+    var index = paths.indexOf(path);
+    if (index === -1) throw new Error('No transform Registered at path: ' + path);
+
+    this._transforms.splice(index, 1);
+    this._paths.splice(index, 1);
+};
 
 /**
  * Notifies the transform system that the a node's information has changed.
