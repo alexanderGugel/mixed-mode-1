@@ -26,6 +26,7 @@
 
 var PathUtils = require('./Path');
 var Transform = require('./Transform');
+var FamousEngine = require('./FamousEngine');
 
 /**
  * The transform class is responsible for calculating the transform of a particular
@@ -38,6 +39,19 @@ function TransformSystem () {
     this._transforms = [];
     this._paths = [];
 }
+
+/**
+ * Internal method to request an update for the transform system.
+ *
+ * @method _requestUpdate
+ * @protected
+ */
+TransformSystem.prototype._requestUpdate = function _requestUpdate () {
+    if (!this._requestingUpdate) {
+        FamousEngine.requestUpdate(this);
+        this._requestingUpdate = true;
+    }
+};
 
 /**
  * registers a new Transform for the given path. This transform will be updated
@@ -66,6 +80,18 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
     var newTransform = new Transform();
     newTransform.setParent(paths[paths.indexOf(PathUtils.parent(path))]);
     this._transforms.splice(i, 0, newTransform);
+    if (!this._requestingUpdate) this._requestUpdate();
+};
+
+
+/**
+ * Notifies the transform system that the a node's information has changed.
+ *
+ * @method update
+ * @return {void}
+ */
+TransformSystem.prototype.update = function update () {
+    if (!this._requestingUpdate) this._requestUpdate();
 };
 
 /**
@@ -89,15 +115,6 @@ TransformSystem.prototype.onUpdate = function onUpdate () {
         if (transform.from(node) && node.onTransformChange)
             node.onTransformChange(transform.transform);
     }
-};
-    
-/**
- * Returns the last calculated transform
- *
- * @return {Array} a transform
- */
-TransformSystem.prototype.get = function get () {
-    return this._matrix;
 };
 
 /**
