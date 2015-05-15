@@ -66,34 +66,29 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
     this._transforms.splice(i, 0, newTransform);
 };
 
-
+/**
+ * onUpdate is called when the transform system requires an update.
+ * It traverses the transform array and evaluates the necessary transforms
+ * in the scene graph with the information from the corresponding node
+ * in the scene graph
+ *
+ * @method onUpdate
+ */
 TransformSystem.prototype.onUpdate = function onUpdate () {
     var transforms = this._transforms;
     var paths = this._paths;
     var changed;
-    var transforms;
     var node;
 
     for (var i = 0, len = transforms.length ; i < len ; i++) {
         node = Dispatch.getNode(paths[i]);
+        if (!node) continue;
         transform = transforms[i];
         if (transform.from(node) && node.onTransformChange)
             node.onTransformChange(transform.transform);
     }
+};
     
-        
-        
-
-
-
-
-
-        
-
-
-TransformSystem.prototype.dirtyTransformAtPath = function dirtyTransformAtPath (path) {
-    var index = this._paths.indexOf(path);
-
 /**
  * Returns the last calculated transform
  *

@@ -42,7 +42,6 @@ Transform.prototype.reset = function reset () {
     this.needsUpdate = false;
     this.parent = null;
     this.breakPoint = false;
-    this.world = false;
 };
 
 Transform.prototype.setParent = function setParent (parent) {
@@ -69,27 +68,20 @@ Transform.prototype.isBreakPoint = function isBreakPoint () {
     return this.breakPoint;
 };
 
-Transform.prototype.setWorld = function setWorld () {
-    this.world = true;
-};
-
-Transform.prototype.needsWorld = function needsWorld () {
-    return this.world;
-};
-
 Transform.prototype.getLocalTransform = function getLocalTransform () {
     return this.local;
 };
 
 Transform.prototype.getGlobalTransform = function getGlobalTransform () {
-    if (!this.world) throw new Error('This transform is not calculating world transforms');
+    if (!this.isBreakPoint())
+        throw new Error('This transform is not calculating world transforms');
     return this.global;
 };
 
 Transform.prototype.from = function from (node) {
     if (!this.parent || this.parent.isBreakPoint())
-        return transform.fromNode(node);
-    else return transform.fromNodeWithParent(node);
+        return this.fromNode(node);
+    else return this.fromNodeWithParent(node);
 };
 
 Transform.prototype.calculateWorldMatrix = function calculateWorldMatrix () {
@@ -118,9 +110,12 @@ Transform.prototype.calculateWorldMatrix = function calculateWorldMatrix () {
  * 
  * @return {Boolean} whether or not the target array was changed
  */
-Transform.prototype.fromSpec = function fromSpec (spec, mySize, parentSize, target) {
-    target = target ? target : this._matrix;
-    var changed = rget ? false : true;
+Transform.prototype.fromNode = function fromNode (node) {
+    var target = this.getLocalTransform();
+    var mySize = node.getSize();
+    var spec = node.value;
+    var parentSize = node.getParent().getSize();
+    var changed = false;
 
     var t00         = target[0];
     var t01         = target[1];
@@ -208,7 +203,7 @@ Transform.prototype.fromSpec = function fromSpec (spec, mySize, parentSize, targ
  *
  * @return {Boolean} whether or not the transform changed
  */
-TransformSystem.prototype.fromSpecWithParent = function fromSpecWithParent (node) {
+Transform.prototype.fromNodeWithParent = function fromNodeWithParent (node) {
     var target = this.getLocalTransform();
     var parentMatrix = this.parent.getLocalTransform();
     var mySize = node.getSize();
@@ -320,10 +315,10 @@ TransformSystem.prototype.fromSpecWithParent = function fromSpecWithParent (node
 };
 
 function multiply (out, a, b) {
-    var a00 = a[0], a01 = a[1], a02 = a[2], a03 = a[3],
-        a10 = a[4], a11 = a[5], a12 = a[6], a13 = a[7],
-        a20 = a[8], a21 = a[9], a22 = a[10], a23 = a[11],
-        a30 = a[12], a31 = a[13], a32 = a[14], a33 = a[15];
+    var a00 = a[0], a01 = a[1], a02 = a[2],
+        a10 = a[4], a11 = a[5], a12 = a[6],
+        a20 = a[8], a21 = a[9], a22 = a[10],
+        a30 = a[12], a31 = a[13], a32 = a[14];
 
     var changed = false;
     var res;
@@ -394,7 +389,7 @@ function multiply (out, a, b) {
     out[15] = 0;
 
     return changed;
-};
+}
 
 module.exports = Transform;
 
