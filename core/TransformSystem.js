@@ -37,6 +37,8 @@ function TransformSystem () {
     this._requestingUpdate = false;
     this._transforms = [];
     this._paths = [];
+    this._breakPoints = [];
+    this._worlds = [];
 }
 
 TransformSystem.IDENT = [ 1, 0, 0, 0,
@@ -46,7 +48,8 @@ TransformSystem.IDENT = [ 1, 0, 0, 0,
 
 TransformSystem.prototype.registerTransformAtPath = function registerTransformAtPath (path) {
     var paths = this._paths;
-    if (paths.indexOf(path) !== -1) return;
+    var index = paths.indexOf(path);
+    if (index !== -1) return;
 
     var i = 0;
     var targetDepth = PathUtils.depth(path);
@@ -58,8 +61,38 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
             targetIndex < PathUtils.index(paths[i])
     ) i++;
     paths.splice(i, 0, path);
-    this._transforms.splice(i, 0, new Transform());
+    var newTransform = new Transform();
+    newTransform.setParent(paths[paths.indexOf(PathUtils.parent(path))]);
+    this._transforms.splice(i, 0, newTransform);
 };
+
+
+TransformSystem.prototype.onUpdate = function onUpdate () {
+    var transforms = this._transforms;
+    var paths = this._paths;
+    var changed;
+    var transforms;
+    var node;
+
+    for (var i = 0, len = transforms.length ; i < len ; i++) {
+        node = Dispatch.getNode(paths[i]);
+        transform = transforms[i];
+        if (transform.from(node) && node.onTransformChange)
+            node.onTransformChange(transform.transform);
+    }
+    
+        
+        
+
+
+
+
+
+        
+
+
+TransformSystem.prototype.dirtyTransformAtPath = function dirtyTransformAtPath (path) {
+    var index = this._paths.indexOf(path);
 
 /**
  * Returns the last calculated transform
