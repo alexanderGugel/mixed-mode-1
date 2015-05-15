@@ -1,18 +1,18 @@
 /**
  * The MIT License (MIT)
- * 
+ *
  * Copyright (c) 2015 Famous Industries Inc.
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -102,12 +102,12 @@ Transform.prototype.calculateWorldMatrix = function calculateWorldMatrix () {
  * Creates a transformation matrix from a Node's spec.
  *
  * @method fromSpec
- * 
+ *
  * @param {Node.Spec} spec of the node
  * @param {Array} size of the node
  * @param {Array} size of the node's parent
  * @param {Array} target array to write the matrix to
- * 
+ *
  * @return {Boolean} whether or not the target array was changed
  */
 Transform.prototype.fromNode = function fromNode (node) {
@@ -177,7 +177,7 @@ Transform.prototype.fromNode = function fromNode (node) {
                  (target[1] * originX + target[5] * originY + target[9] * originZ);
     target[14] = alignZ + posZ - mountPointZ + originZ -
                  (target[2] * originX + target[6] * originY + target[10] * originZ);
-    target[15] = 0;
+    target[15] = 1;
 
     if (this.isBreakPoint()) changed = this.calculateWorldMatrix();
 
@@ -185,8 +185,8 @@ Transform.prototype.fromNode = function fromNode (node) {
         t00 !== target[0] ||
         t01 !== target[1] ||
         t02 !== target[2] ||
-        t10 !== target[4] || 
-        t11 !== target[5] || 
+        t10 !== target[4] ||
+        t11 !== target[5] ||
         t12 !== target[6] ||
         t20 !== target[8] ||
         t21 !== target[9] ||
@@ -324,7 +324,7 @@ function multiply (out, a, b) {
     var res;
 
     // Cache only the current line of the second matrix
-    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];  
+    var b0  = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
 
     res = b0*a00 + b1*a10 + b2*a20 + b3*a30;
     changed = changed ? changed : out[0] === res;
@@ -333,7 +333,7 @@ function multiply (out, a, b) {
     res = b0*a01 + b1*a11 + b2*a21 + b3*a31;
     changed = changed ? changed : out[1] === res;
     out[1] = res;
-    
+
     res = b0*a02 + b1*a12 + b2*a22 + b3*a32;
     changed = changed ? changed : out[2] === res;
     out[2] = res;
@@ -386,10 +386,9 @@ function multiply (out, a, b) {
     changed = changed ? changed : out[14] === res;
     out[14] = res;
 
-    out[15] = 0;
+    out[15] = 1;
 
     return changed;
 }
 
 module.exports = Transform;
-
