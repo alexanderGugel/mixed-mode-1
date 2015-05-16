@@ -68,7 +68,10 @@ function DOMRenderer (element, selector, compositor) {
                                                       // renderer is responsible
                                                       // for
 
-    this._boundTriggerEvent = this._triggerEvent.bind(this);
+    var _this = this;
+    this._boundTriggerEvent = function(type, ev) {
+        _this._triggerEvent(type, ev);
+    };
 
     this._selector = selector;
 
@@ -388,6 +391,9 @@ DOMRenderer.prototype.setProperty = function setProperty (name, value) {
  * Sets the size of the currently loaded target.
  * Removes any explicit sizing constraints when passed in `false`
  * ("true-sizing").
+ * 
+ * Invoking setSize is equivalent to a manual invocation of `setWidth` followed
+ * by `setHeight`.
  *
  * @method  setSize
  *
@@ -401,6 +407,18 @@ DOMRenderer.prototype.setSize = function setSize (width, height) {
     this.setHeight(height);
 };
 
+
+/**
+ * Sets the width of the currently loaded ElementCache.
+ * 
+ * @method  setWidth
+ *  
+ * @param  {Number|false} width     The explicit width to be set on the
+ *                                  ElementCache's target (and content) element.
+ *                                  `false` removes any explicit sizing
+ *                                  constraints from the underlying DOM
+ *                                  Elements.
+ */ 
 DOMRenderer.prototype.setWidth = function setWidth(width) {
     this._assertTargetLoaded();
     
@@ -419,7 +437,17 @@ DOMRenderer.prototype.setWidth = function setWidth(width) {
     
     this._target.size[0] = width;
 };
-
+/**
+ * Sets the height of the currently loaded ElementCache.
+ * 
+ * @method  setHeight
+ *  
+ * @param  {Number|false} height    The explicit height to be set on the
+ *                                  ElementCache's target (and content) element.
+ *                                  `false` removes any explicit sizing
+ *                                  constraints from the underlying DOM
+ *                                  Elements.
+ */ 
 DOMRenderer.prototype.setHeight = function setHeight(height) {
     this._assertTargetLoaded();
     
@@ -461,7 +489,6 @@ DOMRenderer.prototype.setAttribute = function setAttribute (name, value) {
  */
 DOMRenderer.prototype.setContent = function setContent (content) {
     this._assertTargetLoaded();
-    this.findChildren();
     
     if (!this._target.content) {
         this._target.content = document.createElement('div');
