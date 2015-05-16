@@ -27,6 +27,7 @@
 var WebGLRenderer = require('../webgl-renderers/WebGLRenderer');
 var Camera = require('../components/Camera');
 var DOMRenderer = require('../dom-renderers/DOMRenderer');
+var Commands = require('../core/Commands');
 
 require('./styles.css');
 
@@ -57,6 +58,9 @@ function Context(el, selector, compositor) {
     this._meshTransform = [];
     this._meshSize = [0, 0, 0];
 
+    this._commandCallbacks = [];
+
+    this.initCommandCallbacks();
     this.onResize();
 }
 
@@ -92,12 +96,56 @@ Context.prototype.getRootSize = function getRootSize() {
     return this.DOMRenderer.getSize();
 };
 
+Context.prototype.initCommandCallbacks = function initCommandCallbacks () {
+    this._commandCallbacks[Commands.INIT_DOM] = initDOM;
+    this._commandCallbacks[Commands.DOM_RENDER_SIZE] = domRenderSize;
+    this._commandCallbacks[Commands.CHANGE_TRANSFORM] = changeTransform;
+    this._commandCallbacks[Commands.CHANGE_SIZE] = changeSize;
+    this._commandCallbacks[Commands.CHANGE_PROPERTY] = changeProperty;
+    this._commandCallbacks[Commands.CHANGE_CONTENT] = changeContext;
+    this._commandCallbacks[Commands.CHANGE_ATTRIBUTE] = changeAttribute;
+    this._commandCallbacks[Commands.ADD_CLASS] = addClass;
+    this._commandCallbacks[Commands.REMOVE_CLASS] = removeClass;
+    this._commandCallbacks[Commands.SUBSCRIBE] = subscribe;
+    this._commandCallbacks[Commands.GL_SET_DRAW_OPTIONS] = glSetDrawOptions;
+    this._commandCallbacks[Commands.GL_AMBIENT_LIGHT] = glAmbientLight;
+    this._commandCallbacks[Commands.GL_LIGHT_POSITION] = glLightPosition;
+    this._commandCallbacks[Commands.GL_LIGHT_COLOR] = glLightColor;
+    this._commandCallbacks[Commands.MATERIAL_INPUT] = materialInput;
+    this._commandCallbacks[Commands.GL_SET_GEOMETRY] = glSetGeometry;
+    this._commandCallbacks[Commands.GL_UNIFORMS] = glUniforms;
+    this._commandCallbacks[Commands.GL_BUFFER_DATA] = glBufferData;
+    this._commandCallbacks[Commands.GL_CUTOUT_STATE] = glCutoutState;
+    this._commandCallbacks[Commands.GL_MESH_VISIBILITY] = glMeshVisibility;
+    this._commandCallbacks[Commands.GL_REMOVE_MESH] = glRemoveMesh;
+    this._commandCallbacks[Commands.PINHOLE_PROJECTION] = pinholeProjection;
+    this._commandCallbacks[Commands.ORTHOGRAPHIC_PROJECTION] = orthographicProjection;
+    this._commandCallbacks[Commands.CHANGE_VIEW_TRANSFORM] = changeViewTransform;
+}
+
 Context.prototype.initWebGL = function initWebGL() {
     this._canvasEl = document.createElement('canvas');
     this._rootEl.appendChild(this._canvasEl);
     this.WebGLRenderer = new WebGLRenderer(this._canvasEl, this._compositor);
     this.onResize();
 };
+
+Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
+    var localIterator = iterator;
+
+    var command = commands[++localIterator];
+    this.DOMRenderer.loadPath(path);
+    this.DOMRenderer.findTarget();
+    while (command) {
+        if (command === Commands.WITH) return localIterator - 1;
+        else localIterator = this._commandCallbacks[command](this, path, commands, localIterator) + 1; 
+        command = commands[localIterator];
+    }
+
+    return localIterator;
+};
+
+// Command Callbacks
 
 function initDom (context, path, commands, iterator) {
     context.DOMRenderer.insertEl(commands[++iterator]);
@@ -309,140 +357,5 @@ function changeViewTransform (context, path, commands, iterator) {
     context._renderState.viewDirty = true;
     return iterator;
 }
-
-Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
-    var localIterator = iterator;
-
-    var command = commands[++localIterator];
-    this.DOMRenderer.loadPath(path);
-    this.DOMRenderer.findTarget();
-    while (command) {
-
-        switch (command) {
-            case 'INIT_DOM':
-                this.DOMRenderer.insertEl(commands[++localIterator]);
-                break;
-
-            case 'DOM_RENDER_SIZE':
-                this.DOMRenderer.getSizeOf(commands[++localIterator]);
-                break;
-
-            case 'CHANGE_TRANSFORM':
-                for (var i = 0 ; i < 16 ; i++) this._meshTransform[i] = commands[++localIterator];
-
-                this.DOMRenderer.setMatrix(this._meshTransform);
-
-                if (this.WebGLRenderer)
-                    this.WebGLRenderer.setCutoutUniform(path, 'u_transform', this._meshTransform);
-
-                break;
-
-            case 'CHANGE_SIZE':
-                var width = commands[++localIterator];
-                var height = commands[++localIterator];
-
-                this.DOMRenderer.setSize(width, height);
-                if (this.WebGLRenderer) {
-                    this._meshSize[0] = width;
-                    this._meshSize[1] = height;
-                    this.WebGLRenderer.setCutoutUniform(path, 'u_size', this._meshSize);
-                }
-                break;
-
-            case 'CHANGE_PROPERTY':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.setProperty(commands[++localIterator], commands[++localIterator]);
-                break;
-
-            case 'CHANGE_CONTENT':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.setContent(commands[++localIterator]);
-                break;
-
-            case 'CHANGE_ATTRIBUTE':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.setAttribute(commands[++localIterator], commands[++localIterator]);
-                break;
-
-            case 'ADD_CLASS':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.addClass(commands[++localIterator]);
-                break;
-
-            case 'REMOVE_CLASS':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.removeClass(commands[++localIterator]);
-                break;
-                
-            case 'SUBSCRIBE':
-                if (this.WebGLRenderer) this.WebGLRenderer.getOrSetCutout(path);
-                this.DOMRenderer.subscribe(commands[++localIterator], commands[++localIterator]);
-                break;
-
-            case 'GL_SET_DRAW_OPTIONS':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setMeshOptions(path, commands[++localIterator]);
-                break;
-
-            case 'GL_AMBIENT_LIGHT':
-                iterator = glAmbientLight(this, path, commands, localIterator);
-                break;
-
-            case 'GL_LIGHT_POSITION':
-                iterator = glLightPosition(this, path, commands, localIterator);
-                break;
-
-            case 'GL_LIGHT_COLOR':
-                iterator = glLightColor(this, path, commands, localIterator);
-                break;
-
-            case 'MATERIAL_INPUT':
-                iterator = materialInput(this, path, commands, localIterator);
-                break;
-
-            case 'GL_SET_GEOMETRY':
-                iterator = glSetGeometry(this, path, commands, localIterator);
-                break;
-
-            case 'GL_UNIFORMS':
-                iterator = glUniforms(this, path, commands, localIterator);
-                break;
-
-            case 'GL_BUFFER_DATA':
-                iterator = glBufferData(this, path, commands, localIterator);
-                break;
-
-            case 'GL_CUTOUT_STATE':
-                iterator = glCutoutState(this, path, commands, localIterator);
-                break;
-
-            case 'GL_MESH_VISIBILITY':
-                iterator = glMeshVisibility(this, path, commands, localIterator);
-                break;
-
-            case 'GL_REMOVE_MESH':
-                localIterator = glRemoveMesh(this, path, commands, localIterator);
-                break;
-
-            case 'PINHOLE_PROJECTION':
-                localIterator = pinholeProjection(this, path, commands, localIterator);
-                break;
-
-            case 'ORTHOGRAPHIC_PROJECTION':
-                localIterator = orthographicProjection(this, path, commands, localIterator);
-                break;
-
-            case 'CHANGE_VIEW_TRANSFORM':
-                localIterator = changeViewTransform(this, path, commands, localIterator);
-                break;
-
-            case 'WITH': return localIterator - 1;
-        }
-
-        command = commands[++localIterator];
-    }
-
-    return localIterator;
-};
 
 module.exports = Context;
