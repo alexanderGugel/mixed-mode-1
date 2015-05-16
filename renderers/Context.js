@@ -28,8 +28,6 @@ var WebGLRenderer = require('../webgl-renderers/WebGLRenderer');
 var Camera = require('../components/Camera');
 var DOMRenderer = require('../dom-renderers/DOMRenderer');
 
-require('./styles.css');
-
 function Context(selector, compositor) {
     this._compositor = compositor;
     this._rootEl = document.querySelector(selector);
@@ -39,6 +37,10 @@ function Context(selector, compositor) {
     }
 
     var DOMLayerEl = document.createElement('div');
+    DOMLayerEl.style.width = '100%';
+    DOMLayerEl.style.height = '100%';
+    DOMLayerEl.style.transformStyle = 'preserve-3d';
+    DOMLayerEl.style.webkitTransformStyle = 'preserve-3d';
     this._rootEl.appendChild(DOMLayerEl);
     this.DOMRenderer = new DOMRenderer(DOMLayerEl, selector, compositor);
 
@@ -113,30 +115,71 @@ function domRenderSize (context, path, commands, iterator) {
 }
 
 function changeTransform (context, path, commands, iterator) {
+    for (var i = 0 ; i < 16 ; i++) context._meshTransform[i] = commands[++iterator];
+
+    context.DOMRenderer.setMatrix(context._meshTransform);
+    
+    if (context.WebGLRenderer)
+        context.WebGLRenderer.setCutoutUniform(path, 'u_transform', context._meshTransform);
 
     return iterator;
 }
 
 function changeSize (context, path, commands, iterator) {
+    var width = commands[++iterator];
+    var height = commands[++iterator];
 
+    context.DOMRenderer.setSize(width, height);
+    if (context.WebGLRenderer) {
+        context._meshSize[0] = width;
+        context._meshSize[1] = height;
+        context.WebGLRenderer.setCutoutUniform(path, 'u_size', context._meshSize);
+    }
+    
     return iterator;
 }
 
 function changeProperty (context, path, commands, iterator) {
-
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.setProperty(commands[iterator], commands[iterator]);
     return iterator;
 }
 
 function changeContent (context, path, commands, iterator) {
-
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.setContent(commands[++iterator]);
     return iterator;
 }
   
 function changeAttribute (context, path, commands, iterator) {
-
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.setAttribute(commands[iterator], commands[++iterator]);
     return iterator;
 }
 
+function addClass (context, path, commands, iterator) {
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.addClass(commands[++iterator]);
+    return iterator;
+}
+
+function removeClass (context, path, commands, iterator) {
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.removeClass(commands[++iterator]);
+    return iterator;
+}
+
+function subscribe (context, path, commands, iterator) {
+    if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
+    context.DOMRenderer.subscribe(commands[++iterator], commands[++iterator]);
+    return iterator;
+}
+
+function glSetDrawOptions (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setMeshOptions(path, commands[++iterator]);
+    return iterator;
+}
 
 Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
     var localIterator = iterator;
@@ -335,8 +378,7 @@ Context.prototype.receive = function receive(pathArr, path, commands, iterator) 
                 this._renderState.viewDirty = true;
                 break;
 
-            case 'WITH':
-                return localIterator - 1;
+            case 'WITH': return localIterator - 1;
         }
 
         command = commands[++localIterator];
