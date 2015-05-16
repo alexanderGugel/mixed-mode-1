@@ -29,6 +29,7 @@
 var Node = require('./Node');
 var Size = require('./Size');
 var Dispatch = require('./Dispatch');
+var Commands = require('./Commands');
 
 /**
  * Scene is the bottom of the scene graph. It is it's own
@@ -117,7 +118,7 @@ Scene.prototype.onReceive = function onReceive (event, payload) {
     // should have a representation as a component. It would be render sized
     // and the context would receive its size the same way that any render size
     // component receives its size.
-    if (event === 'CONTEXT_RESIZE') {
+    if (event === Commands.CONTEXT_RESIZE) {
         
         if (payload.length < 2) 
             throw new Error(

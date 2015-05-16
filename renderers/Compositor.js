@@ -25,6 +25,7 @@
 'use strict';
 
 var Context = require('./Context');
+var Commands = require('../core/Commands');
 
 /**
  * Instantiates a new Compositor, used for routing commands received from the
@@ -80,7 +81,7 @@ Compositor.prototype.getTime = function getTime() {
  *                          cloning algorithm)
  */
 Compositor.prototype.sendEvent = function sendEvent(path, ev, payload) {
-    this._outCommands.push('WITH', path, 'TRIGGER', ev, payload);
+    this._outCommands.push(Commands.WITH, path, Commands.TRIGGER, ev, payload);
 };
 
 /**
@@ -95,7 +96,7 @@ Compositor.prototype.sendEvent = function sendEvent(path, ev, payload) {
  * @param  {Array} size         new context size
  */
 Compositor.prototype.sendResize = function sendResize (selector, size) {
-    this.sendEvent(selector, 'CONTEXT_RESIZE', size);
+    this.sendEvent(selector, Commands.CONTEXT_RESIZE, size);
 };
 
 /**
@@ -174,13 +175,13 @@ Compositor.prototype.drawCommands = function drawCommands() {
     var command = commands[localIterator];
     while (command) {
         switch (command) {
-            case 'TIME':
+            case Commands.TIME:
                 this._time = commands[++localIterator];
                 break;
-            case 'WITH':
+            case Commands.WITH:
                 localIterator = this.handleWith(++localIterator, commands);
                 break;
-            case 'NEED_SIZE_FOR':
+            case Commands.NEED_SIZE_FOR:
                 this.giveSizeFor(++localIterator, commands);
                 break;
         }

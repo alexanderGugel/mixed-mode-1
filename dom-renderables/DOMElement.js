@@ -26,6 +26,7 @@
 
 var CallbackStore = require('../utilities/CallbackStore');
 var TransformSystem = require('../core/TransformSystem');
+var Commands = require('../core/Commands');
 
 var RENDER_SIZE = 2;
 
@@ -154,13 +155,13 @@ DOMElement.prototype.onUpdate = function onUpdate (time) {
     var len = queue.length;
 
     if (len && node) {
-        node.sendDrawCommand('WITH');
+        node.sendDrawCommand(Commands.WITH);
         node.sendDrawCommand(node.getLocation());
-        node.sendDrawCommand('DOM');
+        node.sendDrawCommand(Commands.DOM);
 
         while (len--) node.sendDrawCommand(queue.shift());
         if (this._requestRenderSize) {
-            node.sendDrawCommand('DOM_RENDER_SIZE');
+            node.sendDrawCommand(Commands.DOM_RENDER_SIZE);
             node.sendDrawCommand(node.getLocation());
             this._requestRenderSize = false;
         }
@@ -291,7 +292,7 @@ DOMElement.prototype.onHide = function onHide () {
  * @param {Boolean} usesCutout  The presence of a WebGL 'cutout' for this element.
  */
 DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
-    this._changeQueue.push('GL_CUTOUT_STATE', usesCutout);
+    this._changeQueue.push(Commands.GL_CUTOUT_STATE, usesCutout);
 
     if (this._initialized) this._requestUpdate();
 };
@@ -307,8 +308,9 @@ DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
  * @param  {Float32Array} transform     The final transform matrix.
  */
 DOMElement.prototype.onTransformChange = function onTransformChange (transform) {
-    this._changeQueue.push('CHANGE_TRANSFORM');
+    this._changeQueue.push(Commands.CHANGE_TRANSFORM);
     transform = transform.getLocalTransform();
+    
     for (var i = 0, len = transform.length ; i < len ; i++)
         this._changeQueue.push(transform[i]);
 
@@ -329,7 +331,7 @@ DOMElement.prototype.onSizeChange = function onSizeChange (size) {
     var sizedX = sizeMode[0] !== RENDER_SIZE;
     var sizedY = sizeMode[1] !== RENDER_SIZE;
     if (this._initialized)
-        this._changeQueue.push('CHANGE_SIZE',
+        this._changeQueue.push(Commands.CHANGE_SIZE,
             sizedX ? size[0] : sizedX,
             sizedY ? size[1] : sizedY);
 
@@ -373,7 +375,7 @@ DOMElement.prototype.onAddUIEvent = function onAddUIEvent (UIEvent) {
  */
 DOMElement.prototype._subscribe = function _subscribe (UIEvent) {
     if (this._initialized) {
-        this._changeQueue.push('SUBSCRIBE', UIEvent, true);
+        this._changeQueue.push(Commands.SUBSCRIBE, UIEvent, true);
     }
     if (!this._requestingUpdate) {
         this._requestUpdate();
@@ -415,7 +417,7 @@ DOMElement.prototype._requestUpdate = function _requestUpdate () {
  * @method init
  */
 DOMElement.prototype.init = function init () {
-    this._changeQueue.push('INIT_DOM', this._tagName);
+    this._changeQueue.push(Commands.INIT_DOM, this._tagName);
     this._initialized = true;
     this.onTransformChange(TransformSystem.get(this._node.getLocation()));
     this.onSizeChange(this._node.getSize());
@@ -447,7 +449,7 @@ DOMElement.prototype.setId = function setId (id) {
  */
 DOMElement.prototype.addClass = function addClass (value) {
     if (this._classes.indexOf(value) < 0) {
-        if (this._initialized) this._changeQueue.push('ADD_CLASS', value);
+        if (this._initialized) this._changeQueue.push(Commands.ADD_CLASS, value);
         this._classes.push(value);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
@@ -455,7 +457,7 @@ DOMElement.prototype.addClass = function addClass (value) {
     }
 
     if (this._inDraw) {
-        if (this._initialized) this._changeQueue.push('ADD_CLASS', value);
+        if (this._initialized) this._changeQueue.push(Commands.ADD_CLASS, value);
         if (!this._requestingUpdate) this._requestUpdate();
     }
     return this;
@@ -474,7 +476,7 @@ DOMElement.prototype.removeClass = function removeClass (value) {
 
     if (index < 0) return this;
 
-    this._changeQueue.push('REMOVE_CLASS', value);
+    this._changeQueue.push(Commands.REMOVE_CLASS, value);
 
     this._classes.splice(index, 1);
 
@@ -493,7 +495,7 @@ DOMElement.prototype.removeClass = function removeClass (value) {
 DOMElement.prototype.setAttribute = function setAttribute (name, value) {
     if (this._attributes[name] !== value || this._inDraw) {
         this._attributes[name] = value;
-        if (this._initialized) this._changeQueue.push('CHANGE_ATTRIBUTE', name, value);
+        if (this._initialized) this._changeQueue.push(Commands.CHANGE_ATTRIBUTE, name, value);
         if (!this._requestUpdate) this._requestUpdate();
     }
     return this;
@@ -512,7 +514,7 @@ DOMElement.prototype.setAttribute = function setAttribute (name, value) {
 DOMElement.prototype.setProperty = function setProperty (name, value) {
     if (this._styles[name] !== value || this._inDraw) {
         this._styles[name] = value;
-        if (this._initialized) this._changeQueue.push('CHANGE_PROPERTY', name, value);
+        if (this._initialized) this._changeQueue.push(Commands.CHANGE_PROPERTY, name, value);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
     }
@@ -530,7 +532,7 @@ DOMElement.prototype.setProperty = function setProperty (name, value) {
 DOMElement.prototype.setContent = function setContent (content) {
     if (this._content !== content || this._inDraw) {
         this._content = content;
-        if (this._initialized) this._changeQueue.push('CHANGE_CONTENT', content);
+        if (this._initialized) this._changeQueue.push(Commands.CHANGE_CONTENT, content);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
     }
