@@ -43,9 +43,16 @@ function Compositor() {
 
     var _this = this;
     window.addEventListener('resize', function() {
-        _this._resized = true;
+        _this.onResize();
     });
 }
+
+Compositor.prototype.onResize = function onResize () {
+    this._resized = true;
+    for (var selector in this._contexts) {
+        this._contexts[selector].onResize();
+    }
+};
 
 /**
  * Retrieves the time being used by the internal clock managed by
@@ -121,8 +128,19 @@ Compositor.prototype.handleWith = function handleWith (iterator, commands) {
  * @return {Context}                    final VirtualElement
  */
 Compositor.prototype.getOrSetContext = function getOrSetContext(selector) {
-    if (this._contexts[selector]) return this._contexts[selector];
-    else return (this._contexts[selector] = new Context(selector, this));
+    if (this._contexts[selector]) {
+        return this._contexts[selector];
+    } else {
+        var el = document.querySelector(selector);
+        if (el === null) {
+            throw new Error(
+                'Invalid selector'
+            );
+        }
+        var context = new Context(el, selector, this);
+        this._contexts[selector] = context;
+        return context;
+    }
 };
 
 /**

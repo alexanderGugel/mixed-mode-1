@@ -1,3 +1,4 @@
+'use strict';
 
 function Commands () {
     this.INIT_DOM = 0;
@@ -57,4 +58,3 @@ Commands.prototype.initArgs = function initArgs () {
 };
 
 module.exports = new Commands();
-
