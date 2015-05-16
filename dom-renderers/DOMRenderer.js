@@ -45,6 +45,8 @@ var TRANSFORM = null;
  * @param {Compositor}
  */
 function DOMRenderer (element, selector, compositor) {
+    element.classList.add('famous-dom-renderer');
+    
     TRANSFORM = TRANSFORM || vendorPrefix('transform');
     this._compositor = compositor; // a reference to the compositor
 
@@ -560,7 +562,7 @@ DOMRenderer.prototype.removeClass = function removeClass (domClass) {
  */
 DOMRenderer.prototype._stringifyMatrix = function _stringifyMatrix(m) {
     var r = 'matrix3d(';
-
+    
     r += (m[0] < 0.000001 && m[0] > -0.000001) ? '0,' : m[0] + ',';
     r += (m[1] < 0.000001 && m[1] > -0.000001) ? '0,' : m[1] + ',';
     r += (m[2] < 0.000001 && m[2] > -0.000001) ? '0,' : m[2] + ',';
@@ -576,7 +578,7 @@ DOMRenderer.prototype._stringifyMatrix = function _stringifyMatrix(m) {
     r += (m[12] < 0.000001 && m[12] > -0.000001) ? '0,' : m[12] + ',';
     r += (m[13] < 0.000001 && m[13] > -0.000001) ? '0,' : m[13] + ',';
     r += (m[14] < 0.000001 && m[14] > -0.000001) ? '0,' : m[14] + ',';
-
+    
     r += m[15] + ')';
     return r;
 };

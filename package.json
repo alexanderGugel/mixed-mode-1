@@ -30,6 +30,7 @@
   "license": "All rights reserved",
   "devDependencies": {
     "browserify": "^9.0.3",
+    "cssify": "^0.7.0",
     "jscs": "^1.13.1",
     "jshint": "^2.7.0",
     "jshint-stylish": "^1.0.2",
@@ -44,7 +45,8 @@
   },
   "browserify": {
     "transform": [
-      "glslify"
+      "glslify",
+      "cssify"
     ]
   }
 }
