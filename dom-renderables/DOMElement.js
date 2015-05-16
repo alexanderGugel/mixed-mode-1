@@ -609,21 +609,5 @@ DOMElement.prototype.draw = function draw () {
     this._inDraw = false;
 };
 
-DOMElement.DEFAULT_STYLES = {
-    'position': 'absolute',
-    '-webkit-transform-origin': '0% 0%',
-    'transform-origin': '0% 0%',
-    '-webkit-backface-visibility': 'visible',
-    'backface-visibility': 'visible',
-    '-webkit-transform-style': 'preserve-3d',
-    'transform-style': 'preserve-3d',
-    '-webkit-tap-highlight-color': 'transparent',
-    'pointer-events': 'auto',
-    'z-index': '1',
-    'box-sizing': 'border-box',
-    '-moz-box-sizing': 'border-box',
-    '-webkit-box-sizing': 'border-box'
-};
-
 module.exports = DOMElement;
 

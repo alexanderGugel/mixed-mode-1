@@ -28,6 +28,8 @@ var WebGLRenderer = require('../webgl-renderers/WebGLRenderer');
 var Camera = require('../components/Camera');
 var DOMRenderer = require('../dom-renderers/DOMRenderer');
 
+require('./styles.css');
+
 function Context(selector, compositor) {
     this._compositor = compositor;
     this._rootEl = document.querySelector(selector);
@@ -37,10 +39,6 @@ function Context(selector, compositor) {
     }
 
     var DOMLayerEl = document.createElement('div');
-    DOMLayerEl.style.width = '100%';
-    DOMLayerEl.style.height = '100%';
-    DOMLayerEl.style.transformStyle = 'preserve-3d';
-    DOMLayerEl.style.webkitTransformStyle = 'preserve-3d';
     this._rootEl.appendChild(DOMLayerEl);
     this.DOMRenderer = new DOMRenderer(DOMLayerEl, selector, compositor);
 
@@ -301,7 +299,8 @@ Context.prototype.receive = function receive(pathArr, path, commands, iterator) 
                 this._renderState.viewDirty = true;
                 break;
 
-            case 'WITH': return localIterator - 1;
+            case 'WITH':
+                return localIterator - 1;
         }
 
         command = commands[++localIterator];
