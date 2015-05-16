@@ -102,6 +102,42 @@ Context.prototype.initWebGL = function initWebGL() {
     this.updateSize();
 };
 
+function initDom (context, path, commands, iterator) {
+    context.DOMRenderer.insertEl(commands[++iterator]);
+    return iterator;
+}
+
+function domRenderSize (context, path, commands, iterator) {
+    context.DOMRenderer.getSizeOf(commands[++iterator]);
+    return iterator;
+}
+
+function changeTransform (context, path, commands, iterator) {
+
+    return iterator;
+}
+
+function changeSize (context, path, commands, iterator) {
+
+    return iterator;
+}
+
+function changeProperty (context, path, commands, iterator) {
+
+    return iterator;
+}
+
+function changeContent (context, path, commands, iterator) {
+
+    return iterator;
+}
+  
+function changeAttribute (context, path, commands, iterator) {
+
+    return iterator;
+}
+
+
 Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
     var localIterator = iterator;
 
