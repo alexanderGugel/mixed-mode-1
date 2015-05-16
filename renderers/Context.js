@@ -28,24 +28,19 @@ var WebGLRenderer = require('../webgl-renderers/WebGLRenderer');
 var Camera = require('../components/Camera');
 var DOMRenderer = require('../dom-renderers/DOMRenderer');
 
-function Context(selector, compositor) {
+require('./styles.css');
+
+function Context(el, selector, compositor) {
+    this._rootEl = el;
+    this._selector = selector;
     this._compositor = compositor;
-    this._rootEl = document.querySelector(selector);
 
-    if (this._rootEl === document.body) {
-        window.addEventListener('resize', this.updateSize.bind(this));
-    }
-
-    var DOMLayerEl = document.createElement('div');
-    DOMLayerEl.style.width = '100%';
-    DOMLayerEl.style.height = '100%';
-    DOMLayerEl.style.transformStyle = 'preserve-3d';
-    DOMLayerEl.style.webkitTransformStyle = 'preserve-3d';
-    this._rootEl.appendChild(DOMLayerEl);
-    this.DOMRenderer = new DOMRenderer(DOMLayerEl, selector, compositor);
+    this._domEl = document.createElement('div');
+    this._rootEl.appendChild(this._domEl);
+    this.DOMRenderer = new DOMRenderer(this._domEl, selector, compositor);
 
     this.WebGLRenderer = null;
-    this.canvas = null;
+    this._canvasEl = null;
 
     this._renderState = {
         projectionType: Camera.ORTHOGRAPHIC_PROJECTION,
@@ -62,10 +57,10 @@ function Context(selector, compositor) {
     this._meshTransform = [];
     this._meshSize = [0, 0, 0];
 
-    this.updateSize();
+    this.onResize();
 }
 
-Context.prototype.updateSize = function () {
+Context.prototype.onResize = function () {
     var newSize = this.DOMRenderer.getSize();
 
     var width = newSize[0];
@@ -75,12 +70,12 @@ Context.prototype.updateSize = function () {
     this._size[1] = height;
     this._size[2] = (width > height) ? width : height;
 
-    if (this.canvas) {
-        this.canvas.width  = width;
-        this.canvas.height = height;
+    if (this._canvasEl) {
+        this._canvasEl.width  = width;
+        this._canvasEl.height = height;
     }
 
-    if (this.WebGLRenderer) this.WebGLRenderer.updateSize(this._size);
+    if (this.WebGLRenderer) this.WebGLRenderer.onResize(this._size);
 
     return this;
 };
@@ -98,10 +93,10 @@ Context.prototype.getRootSize = function getRootSize() {
 };
 
 Context.prototype.initWebGL = function initWebGL() {
-    this.canvas = document.createElement('canvas');
-    this._rootEl.appendChild(this.canvas);
-    this.WebGLRenderer = new WebGLRenderer(this.canvas, this._compositor);
-    this.updateSize();
+    this._canvasEl = document.createElement('canvas');
+    this._rootEl.appendChild(this._canvasEl);
+    this.WebGLRenderer = new WebGLRenderer(this._canvasEl, this._compositor);
+    this.onResize();
 };
 
 function initDom (context, path, commands, iterator) {
