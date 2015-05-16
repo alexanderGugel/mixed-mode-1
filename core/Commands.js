@@ -26,6 +26,14 @@ function Commands () {
     this.ORTHOGRAPHIC_PROJECTION = 22;
     this.CHANGE_VIEW_TRANSFORM = 23;
     this.WITH = 24;
+    this.FRAME = 25;
+    this.ENGINE = 26;
+    this.START = 27;
+    this.STOP = 28;
+    this.TIME = 29;
+    this.TRIGGER = 30;
+    this.CONTEXT_RESIZE = 31;
+    this.NEED_SIZE_FOR = 32;
     this._args = [];
     this.initArgs();
 }
