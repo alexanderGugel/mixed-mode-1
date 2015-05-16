@@ -102,7 +102,7 @@ Context.prototype.initCommandCallbacks = function initCommandCallbacks () {
     this._commandCallbacks[Commands.CHANGE_TRANSFORM] = changeTransform;
     this._commandCallbacks[Commands.CHANGE_SIZE] = changeSize;
     this._commandCallbacks[Commands.CHANGE_PROPERTY] = changeProperty;
-    this._commandCallbacks[Commands.CHANGE_CONTENT] = changeContext;
+    this._commandCallbacks[Commands.CHANGE_CONTENT] = changeContent;
     this._commandCallbacks[Commands.CHANGE_ATTRIBUTE] = changeAttribute;
     this._commandCallbacks[Commands.ADD_CLASS] = addClass;
     this._commandCallbacks[Commands.REMOVE_CLASS] = removeClass;
@@ -136,7 +136,7 @@ Context.prototype.receive = function receive(pathArr, path, commands, iterator) 
     var command = commands[++localIterator];
     this.DOMRenderer.loadPath(path);
     this.DOMRenderer.findTarget();
-    while (command) {
+    while (command != null) {
         if (command === Commands.WITH) return localIterator - 1;
         else localIterator = this._commandCallbacks[command](this, path, commands, localIterator) + 1; 
         command = commands[localIterator];
@@ -147,7 +147,7 @@ Context.prototype.receive = function receive(pathArr, path, commands, iterator) 
 
 // Command Callbacks
 
-function initDom (context, path, commands, iterator) {
+function initDOM (context, path, commands, iterator) {
     context.DOMRenderer.insertEl(commands[++iterator]);
     return iterator;
 }
@@ -184,7 +184,7 @@ function changeSize (context, path, commands, iterator) {
 
 function changeProperty (context, path, commands, iterator) {
     if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
-    context.DOMRenderer.setProperty(commands[iterator], commands[iterator]);
+    context.DOMRenderer.setProperty(commands[++iterator], commands[++iterator]);
     return iterator;
 }
 
@@ -196,7 +196,7 @@ function changeContent (context, path, commands, iterator) {
   
 function changeAttribute (context, path, commands, iterator) {
     if (context.WebGLRenderer) context.WebGLRenderer.getOrSetCutout(path);
-    context.DOMRenderer.setAttribute(commands[iterator], commands[++iterator]);
+    context.DOMRenderer.setAttribute(commands[++iterator], commands[++iterator]);
     return iterator;
 }
 

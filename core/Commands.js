@@ -34,6 +34,7 @@ function Commands () {
     this.TRIGGER = 30;
     this.CONTEXT_RESIZE = 31;
     this.NEED_SIZE_FOR = 32;
+    this.DOM = 33;
     this._args = [];
     this.initArgs();
 }
