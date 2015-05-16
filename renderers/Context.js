@@ -176,6 +176,140 @@ function glSetDrawOptions (context, path, commands, iterator) {
     return iterator;
 }
 
+function glAmbientLight (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setAmbientLightColor(
+        path,
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glLightPosition (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setLightPosition(
+        path,
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glLightColor (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setLightColor(
+        path,
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function materialInput (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.handleMaterialInput(
+        path,
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glSetGeometry (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setGeometry(
+        path,
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glUniforms (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setMeshUniform(
+        path,
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glBufferData (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.bufferData(
+        path,
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator],
+        commands[++iterator]
+    );
+    return iterator;
+}
+
+function glCutoutState (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setCutoutState(path, commands[++iterator]);
+    return iterator;
+}
+
+function glMeshVisibility (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.setMeshVisibility(path, commands[++iterator]);
+    return iterator;
+}
+
+function glRemoveMesh (context, path, commands, iterator) {
+    if (!context.WebGLRenderer) context.initWebGL();
+    context.WebGLRenderer.removeMesh(path);
+    return iterator;
+}
+
+function pinholeProjection (context, path, commands, iterator) {
+    context._renderState.projectionType = Camera.PINHOLE_PROJECTION;
+    context._renderState.perspectiveTransform[11] = -1 / commands[++iterator];
+    context._renderState.perspectiveDirty = true;
+    return iterator;
+}
+
+function orthographicProjection (context, path, commands, iterator) {
+    context._renderState.projectionType = Camera.ORTHOGRAPHIC_PROJECTION;
+    context._renderState.perspectiveTransform[11] = 0;
+    context._renderState.perspectiveDirty = true;
+    return iterator;
+}
+
+function changeViewTransform (context, path, commands, iterator) {
+    context._renderState.viewTransform[0] = commands[++iterator];
+    context._renderState.viewTransform[1] = commands[++iterator];
+    context._renderState.viewTransform[2] = commands[++iterator];
+    context._renderState.viewTransform[3] = commands[++iterator];
+
+    context._renderState.viewTransform[4] = commands[++iterator];
+    context._renderState.viewTransform[5] = commands[++iterator];
+    context._renderState.viewTransform[6] = commands[++iterator];
+    context._renderState.viewTransform[7] = commands[++iterator];
+
+    context._renderState.viewTransform[8] = commands[++iterator];
+    context._renderState.viewTransform[9] = commands[++iterator];
+    context._renderState.viewTransform[10] = commands[++iterator];
+    context._renderState.viewTransform[11] = commands[++iterator];
+
+    context._renderState.viewTransform[12] = commands[++iterator];
+    context._renderState.viewTransform[13] = commands[++iterator];
+    context._renderState.viewTransform[14] = commands[++iterator];
+    context._renderState.viewTransform[15] = commands[++iterator];
+
+    context._renderState.viewDirty = true;
+    return iterator;
+}
+
 Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
     var localIterator = iterator;
 
@@ -251,126 +385,55 @@ Context.prototype.receive = function receive(pathArr, path, commands, iterator) 
                 break;
 
             case 'GL_AMBIENT_LIGHT':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setAmbientLightColor(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glAmbientLight(this, path, commands, localIterator);
                 break;
 
             case 'GL_LIGHT_POSITION':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setLightPosition(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glLightPosition(this, path, commands, localIterator);
                 break;
 
             case 'GL_LIGHT_COLOR':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setLightColor(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glLightColor(this, path, commands, localIterator);
                 break;
 
             case 'MATERIAL_INPUT':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.handleMaterialInput(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = materialInput(this, path, commands, localIterator);
                 break;
 
             case 'GL_SET_GEOMETRY':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setGeometry(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glSetGeometry(this, path, commands, localIterator);
                 break;
 
             case 'GL_UNIFORMS':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setMeshUniform(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glUniforms(this, path, commands, localIterator);
                 break;
 
             case 'GL_BUFFER_DATA':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.bufferData(
-                    path,
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator],
-                    commands[++localIterator]
-                );
+                iterator = glBufferData(this, path, commands, localIterator);
                 break;
 
             case 'GL_CUTOUT_STATE':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setCutoutState(path, commands[++localIterator]);
+                iterator = glCutoutState(this, path, commands, localIterator);
                 break;
 
             case 'GL_MESH_VISIBILITY':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.setMeshVisibility(path, commands[++localIterator]);
+                iterator = glMeshVisibility(this, path, commands, localIterator);
                 break;
 
             case 'GL_REMOVE_MESH':
-                if (!this.WebGLRenderer) this.initWebGL();
-                this.WebGLRenderer.removeMesh(path);
+                localIterator = glRemoveMesh(this, path, commands, localIterator);
                 break;
 
             case 'PINHOLE_PROJECTION':
-                this._renderState.projectionType = Camera.PINHOLE_PROJECTION;
-                this._renderState.perspectiveTransform[11] = -1 / commands[++localIterator];
-
-                this._renderState.perspectiveDirty = true;
+                localIterator = pinholeProjection(this, path, commands, localIterator);
                 break;
 
             case 'ORTHOGRAPHIC_PROJECTION':
-                this._renderState.projectionType = Camera.ORTHOGRAPHIC_PROJECTION;
-                this._renderState.perspectiveTransform[11] = 0;
-
-                this._renderState.perspectiveDirty = true;
+                localIterator = orthographicProjection(this, path, commands, localIterator);
                 break;
 
             case 'CHANGE_VIEW_TRANSFORM':
-                this._renderState.viewTransform[0] = commands[++localIterator];
-                this._renderState.viewTransform[1] = commands[++localIterator];
-                this._renderState.viewTransform[2] = commands[++localIterator];
-                this._renderState.viewTransform[3] = commands[++localIterator];
-
-                this._renderState.viewTransform[4] = commands[++localIterator];
-                this._renderState.viewTransform[5] = commands[++localIterator];
-                this._renderState.viewTransform[6] = commands[++localIterator];
-                this._renderState.viewTransform[7] = commands[++localIterator];
-
-                this._renderState.viewTransform[8] = commands[++localIterator];
-                this._renderState.viewTransform[9] = commands[++localIterator];
-                this._renderState.viewTransform[10] = commands[++localIterator];
-                this._renderState.viewTransform[11] = commands[++localIterator];
-
-                this._renderState.viewTransform[12] = commands[++localIterator];
-                this._renderState.viewTransform[13] = commands[++localIterator];
-                this._renderState.viewTransform[14] = commands[++localIterator];
-                this._renderState.viewTransform[15] = commands[++localIterator];
-
-                this._renderState.viewDirty = true;
+                localIterator = changeViewTransform(this, path, commands, localIterator);
                 break;
 
             case 'WITH': return localIterator - 1;
