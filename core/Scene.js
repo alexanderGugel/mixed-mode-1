@@ -64,7 +64,7 @@ function Scene (selector, updater) {
                           // (it is its own parent)
     
     this._updater                  // message a request for the dom
-        .message('NEED_SIZE_FOR')  // size of the context so that
+        .message(Commands.NEED_SIZE_FOR)  // size of the context so that
         .message(selector);        // the scene graph has a total size
 
     this.show(); // the context begins shown (it's already present in the dom)
@@ -118,7 +118,7 @@ Scene.prototype.onReceive = function onReceive (event, payload) {
     // should have a representation as a component. It would be render sized
     // and the context would receive its size the same way that any render size
     // component receives its size.
-    if (event === Commands.CONTEXT_RESIZE) {
+    if (event === 'CONTEXT_RESIZE') {
         
         if (payload.length < 2) 
             throw new Error(

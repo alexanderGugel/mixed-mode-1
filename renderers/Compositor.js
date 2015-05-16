@@ -96,7 +96,7 @@ Compositor.prototype.sendEvent = function sendEvent(path, ev, payload) {
  * @param  {Array} size         new context size
  */
 Compositor.prototype.sendResize = function sendResize (selector, size) {
-    this.sendEvent(selector, Commands.CONTEXT_RESIZE, size);
+    this.sendEvent(selector, 'CONTEXT_RESIZE', size);
 };
 
 /**
