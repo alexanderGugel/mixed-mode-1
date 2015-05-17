@@ -195,10 +195,7 @@ Node.prototype.getId = Node.prototype.getLocation;
  * @param  {Object} payload Event object to be dispatched.
  */
 Node.prototype.emit = function emit (event, payload) {
-    var p = this.getParent();
-    // the context is its own ancestor
-    while (p !== (p = p.getParent()));
-    p.getDispatch().dispatch(event, payload);
+    Dispatch.emit(this.getLocation(), event, payload);
     return this;
 };
 
