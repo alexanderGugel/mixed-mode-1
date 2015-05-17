@@ -55,7 +55,7 @@ function Context(el, selector, compositor) {
     this._children = {};
     this._elementHash = {};
 
-    this._meshTransform = [];
+    this._meshTransform = new Float32Array(16);
     this._meshSize = [0, 0, 0];
 
     this._commandCallbacks = [];
@@ -158,9 +158,26 @@ function domRenderSize (context, path, commands, iterator) {
 }
 
 function changeTransform (context, path, commands, iterator) {
-    for (var i = 0 ; i < 16 ; i++) context._meshTransform[i] = commands[++iterator];
+    var temp = context._meshTransform;
 
-    context.DOMRenderer.setMatrix(context._meshTransform);
+    temp[0] = commands[++iterator];
+    temp[1] = commands[++iterator];
+    temp[2] = commands[++iterator];
+    temp[3] = commands[++iterator];
+    temp[4] = commands[++iterator];
+    temp[5] = commands[++iterator];
+    temp[6] = commands[++iterator];
+    temp[7] = commands[++iterator];
+    temp[8] = commands[++iterator];
+    temp[9] = commands[++iterator];
+    temp[10] = commands[++iterator];
+    temp[11] = commands[++iterator];
+    temp[12] = commands[++iterator];
+    temp[13] = commands[++iterator];
+    temp[14] = commands[++iterator];
+    temp[15] = commands[++iterator];
+
+    context.DOMRenderer.setMatrix(temp);
     
     if (context.WebGLRenderer)
         context.WebGLRenderer.setCutoutUniform(path, 'u_transform', context._meshTransform);
