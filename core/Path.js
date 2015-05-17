@@ -44,7 +44,8 @@ PathUtils.prototype.index = function index (path) {
     var length = path.length;
     var len = this.hasTrailingSlash(path) ? length - 1 : length;
     while (len--) if (path[len] === '/') break;
-    return parseInt(path.substring(len + 1));
+    var result = parseInt(path.substring(len + 1));
+    return isNaN(result) ? 0 : result;
 };
 
 PathUtils.prototype.indexAtDepth = function indexAtDepth (path, depth) {

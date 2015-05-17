@@ -72,8 +72,7 @@ TransformSystem.prototype.registerTransformAtPath = function registerTransformAt
 
     while (
             paths[i] &&
-            targetDepth <= PathUtils.depth(paths[i]) &&
-            targetIndex < PathUtils.index(paths[i])
+            targetDepth >= PathUtils.depth(paths[i])
     ) i++;
     paths.splice(i, 0, path);
     var newTransform = new Transform();
@@ -360,3 +359,4 @@ TransformSystem.prototype.fromSpecWithParent = function fromSpecWithParent (pare
 };
 
 module.exports = new TransformSystem();
+
