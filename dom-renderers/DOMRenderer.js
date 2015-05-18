@@ -494,7 +494,7 @@ DOMRenderer.prototype.setContent = function setContent (content) {
     
     if (!this._target.content) {
         this._target.content = document.createElement('div');
-        this._target.content.style.position = 'absolute';
+        this._target.content.classList.add('famous-dom-element-content');
         this._target.element.insertBefore(
             this._target.content,
             this._target.element.firstChild
