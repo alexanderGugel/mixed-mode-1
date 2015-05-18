@@ -365,14 +365,19 @@ DOMRenderer.prototype.resolveChildren = function resolveChildren (element, paren
     var childPath;
 
     while ((childNode = parent.childNodes[i])) {
+        if (!childNode.dataSet) {
+            i++;
+            continue;
+        }
         childPath = childNode.dataSet.faPath;
-        if (!childPath) i++;
+        if (!childPath) {
+            i++;
+            continue;
+        }
         if (PathUtils.isDescendentOf(childPath, parent)) element.appendChild(childNode);
         else i++;
     }
-}
-        
-
+};
 
 /**
  * Inserts a DOMElement at the currently loaded path, assuming no target is
