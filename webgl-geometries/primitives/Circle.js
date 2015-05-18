@@ -40,15 +40,12 @@ var GeometryHelper = require('../GeometryHelper');
  * @return {Object} constructed geometry
  */
 function Circle (options) {
-    var options  = options || {};
+    options  = options || {};
     var detail   = options.detail || 30;
     var buffers  = getCircleBuffers(detail, true);
-    var backface;
 
     if (options.backface !== false) {
-        backface = GeometryHelper.createBackfaces(buffers.vertices, buffers.indices);
-        buffers.indices.push.apply(buffers.indices, backface.indices);
-        buffers.vertices.push.apply(buffers.vertices, backface.vertices);
+        GeometryHelper.addBackfaceTriangles(buffers.vertices, buffers.indices);
     }
 
     var textureCoords = getCircleTexCoords(buffers.vertices);
@@ -56,9 +53,9 @@ function Circle (options) {
 
     return new Geometry({
         buffers: [
-            { name: 'pos', data: buffers.vertices },
-            { name: 'texCoord', data: textureCoords, size: 2 },
-            { name: 'normals', data: normals },
+            { name: 'a_pos', data: buffers.vertices },
+            { name: 'a_texCoord', data: textureCoords, size: 2 },
+            { name: 'a_normals', data: normals },
             { name: 'indices', data: buffers.indices, size: 1 }
         ]
     });
@@ -70,8 +67,7 @@ function getCircleTexCoords (vertices) {
 
     for (var i = 0; i < nFaces; i++) {
         var x = vertices[i * 3],
-            y = vertices[i * 3 + 1],
-            z = vertices[i * 3 + 2];
+            y = vertices[i * 3 + 1];
 
         textureCoords.push(0.5 + x * 0.5, 0.5 + -y * 0.5);
     }
@@ -91,7 +87,6 @@ function getCircleTexCoords (vertices) {
  * @return {Object} constructed geometry
  */
 function getCircleBuffers(detail) {
-    var detail = detail;
     var vertices = [0, 0, 0];
     var indices = [];
     var counter = 1;

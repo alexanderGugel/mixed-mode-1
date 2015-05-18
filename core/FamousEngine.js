@@ -27,12 +27,16 @@
 var Clock = require('./Clock');
 var Scene = require('./Scene');
 var Channel = require('./Channel');
+var Dispatch = require('./Dispatch');
 var UIManager = require('../renderers/UIManager');
 var Compositor = require('../renderers/Compositor');
 var Engine = require('../engine/Engine');
+var TransformSystem = require('./TransformSystem');
+var Commands = require('./Commands');
 
-var ENGINE_START = ['ENGINE', 'START'];
-var ENGINE_STOP = ['ENGINE', 'STOP'];
+var ENGINE_START = [Commands.ENGINE, Commands.START];
+var ENGINE_STOP = [Commands.ENGINE, Commands.STOP];
+var TIME_UPDATE = [Commands.TIME, null];
 
 /**
  * Famous has two responsibilities, one to act as the highest level
@@ -53,8 +57,8 @@ function FamousEngine() {
     this._scenes = {}; // a hash of all of the scenes's that the FamousEngine
                          // is responsible for.
 
-    this._messages = []; // a queue of all of the draw commands to send to the
-                         // the renderers this frame.
+    this._messages = TIME_UPDATE;   // a queue of all of the draw commands to
+                                    // send to the the renderers this frame.
 
     this._inUpdate = false; // when the famous is updating this is true.
                             // all requests for updates will get put in the
@@ -116,12 +120,16 @@ FamousEngine.prototype._update = function _update () {
     var queue = this._updateQueue;
     var item;
 
+    this._messages[1] = time;
+
     while (nextQueue.length) queue.unshift(nextQueue.pop());
 
     while (queue.length) {
         item = queue.shift();
         if (item && item.onUpdate) item.onUpdate(time);
     }
+
+    TransformSystem.onUpdate();
 
     this._inUpdate = false;
 };
@@ -177,10 +185,10 @@ FamousEngine.prototype.handleMessage = function handleMessage (messages) {
     while (messages.length > 0) {
         command = messages.shift();
         switch (command) {
-            case 'WITH':
+            case Commands.WITH:
                 this.handleWith(messages);
                 break;
-            case 'FRAME':
+            case Commands.FRAME:
                 this.handleFrame(messages);
                 break;
             default:
@@ -205,11 +213,11 @@ FamousEngine.prototype.handleWith = function handleWith (messages) {
     var command = messages.shift();
 
     switch (command) {
-        case 'TRIGGER': // the TRIGGER command sends a UIEvent to the specified path
+        case Commands.TRIGGER: // the TRIGGER command sends a UIEvent to the specified path
             var type = messages.shift();
             var ev = messages.shift();
 
-            this.getContext(path).getDispatch().dispatchUIEvent(path, type, ev);
+            Dispatch.dispatchUIEvent(path, type, ev);
             break;
         default:
             throw new Error('received unknown command: ' + command);
@@ -251,7 +259,7 @@ FamousEngine.prototype.step = function step (time) {
 
     if (this._messages.length) {
         this._channel.sendMessage(this._messages);
-        this._messages.length = 0;
+        while (this._messages.length > 2) this._messages.pop();
     }
 
     return this;

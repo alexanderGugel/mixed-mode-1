@@ -85,7 +85,9 @@ Mesh.prototype.getDrawOptions = function getDrawOptions () {
 };
 
 /**
- * Set the geometry of a mesh.
+ * Assigns a geometry to be used for this mesh.  Will create new Geometry
+ * from primtives if input is a string.  Queues the set command for this 
+ * geometry and looks for buffers to send to the renderer to update geometry.
  *
  * @method setGeometry
  * @chainable
@@ -103,7 +105,7 @@ Mesh.prototype.setGeometry = function setGeometry (geometry, options) {
     if (this.value.geometry !== geometry || this._inDraw) {
         if (this._initialized) {
             this._changeQueue.push('GL_SET_GEOMETRY');
-            this._changeQueue.push(geometry.id);
+            this._changeQueue.push(geometry.spec.id);
             this._changeQueue.push(geometry.spec.type);
             this._changeQueue.push(geometry.spec.dynamic);
         }
@@ -115,9 +117,9 @@ Mesh.prototype.setGeometry = function setGeometry (geometry, options) {
         if (this._node) {
             var i = this.value.geometry.spec.invalidations.length;
             while (i--) {
-                var bufferIndex = this.value.geometry.spec.invalidations.pop();
+                this.value.geometry.spec.invalidations.pop();
                 this._changeQueue.push('GL_BUFFER_DATA');
-                this._changeQueue.push(this.value.geometry.id);
+                this._changeQueue.push(this.value.geometry.spec.id);
                 this._changeQueue.push(this.value.geometry.spec.bufferNames[i]);
                 this._changeQueue.push(this.value.geometry.spec.bufferValues[i]);
                 this._changeQueue.push(this.value.geometry.spec.bufferSpacings[i]);
@@ -130,7 +132,7 @@ Mesh.prototype.setGeometry = function setGeometry (geometry, options) {
 };
 
 /**
- * Get the geometry of a mesh.
+ * Gets the geometry of a mesh.
  *
  * @method getGeometry
  * @returns {Geometry} geometry Geometry of mesh
@@ -180,7 +182,7 @@ Mesh.prototype.setBaseColor = function setBaseColor (color) {
             this._changeQueue.push('GL_UNIFORMS');
         }
 
-        this._changeQueue.push('baseColor');
+        this._changeQueue.push('u_baseColor');
         this._changeQueue.push(uniformValue);
     }
 
@@ -211,7 +213,7 @@ Mesh.prototype.setFlatShading = function setFlatShading (bool) {
         this.value.flatShading = bool;
         if (this._initialized) {
             this._changeQueue.push('GL_UNIFORMS');
-            this._changeQueue.push('u_FlatShading');
+            this._changeQueue.push('u_flatShading');
             this._changeQueue.push(bool ? 1 : 0);
         }
         this._requestUpdate();
@@ -249,7 +251,7 @@ Mesh.prototype.setNormals = function setNormals (materialExpression) {
 
     if (this._initialized) {
         this._changeQueue.push(materialExpression.__isAMaterial__ ? 'MATERIAL_INPUT' : 'UNIFORM_INPUT');
-        this._changeQueue.push('u_Normals');
+        this._changeQueue.push('u_normals');
         this._changeQueue.push(materialExpression);
     }
 
@@ -278,8 +280,6 @@ Mesh.prototype.getNormals = function getNormals (materialExpression) {
  * @chainable
  */
 Mesh.prototype.setGlossiness = function setGlossiness(glossiness, strength) {
-    var glossiness;
-
     if (glossiness.__isAMaterial__) {
         this.value.glossiness = [null, null];
         this.value.expressions.glossiness = glossiness;
@@ -293,7 +293,7 @@ Mesh.prototype.setGlossiness = function setGlossiness(glossiness, strength) {
 
     if (this._initialized) {
         this._changeQueue.push(glossiness.__isAMaterial__ ? 'MATERIAL_INPUT' : 'GL_UNIFORMS');
-        this._changeQueue.push('glossiness');
+        this._changeQueue.push('u_glossiness');
         this._changeQueue.push(glossiness);
     }
 
@@ -338,7 +338,7 @@ Mesh.prototype.setPositionOffset = function positionOffset(materialExpression) {
 
     if (this._initialized) {
         this._changeQueue.push(materialExpression.__isAMaterial__ ? 'MATERIAL_INPUT' : 'GL_UNIFORMS');
-        this._changeQueue.push('positionOffset');
+        this._changeQueue.push('u_positionOffset');
         this._changeQueue.push(uniformValue);
     }
 
@@ -353,7 +353,7 @@ Mesh.prototype.setPositionOffset = function positionOffset(materialExpression) {
  * @method getPositionOffset
  * @returns {MaterialExpress|Number}
  */
-Mesh.prototype.getPositionOffset = function getPositionOffset (materialExpression) {
+Mesh.prototype.getPositionOffset = function getPositionOffset () {
     return this.value.expressions.positionOffset || this.value.positionOffset;
 };
 
@@ -402,13 +402,13 @@ Mesh.prototype.onUpdate = function onUpdate() {
         // If any invalidations exist, push them into the queue
         if (this.value.color && this.value.color.isActive()) {
             this._node.sendDrawCommand('GL_UNIFORMS');
-            this._node.sendDrawCommand('baseColor');
+            this._node.sendDrawCommand('u_baseColor');
             this._node.sendDrawCommand(this.value.color.getNormalizedRGB());
             this._node.requestUpdateOnNextTick(this._id);
         }
         if (this.value.glossiness && this.value.glossiness[0] && this.value.glossiness[0].isActive()) {
             this._node.sendDrawCommand('GL_UNIFORMS');
-            this._node.sendDrawCommand('glossiness');
+            this._node.sendDrawCommand('u_glossiness');
             var glossiness = this.value.glossiness[0].getNormalizedRGB();
             glossiness.push(this.value.glossiness[1]);
             this._node.sendDrawCommand(glossiness);
@@ -465,7 +465,7 @@ Mesh.prototype.onHide = function onHide () {
 Mesh.prototype.onTransformChange = function onTransformChange (transform) {
     if (this._initialized) {
         this._changeQueue.push('GL_UNIFORMS');
-        this._changeQueue.push('transform');
+        this._changeQueue.push('u_transform');
         this._changeQueue.push(transform);
     }
 
@@ -480,7 +480,7 @@ Mesh.prototype.onTransformChange = function onTransformChange (transform) {
 Mesh.prototype.onSizeChange = function onSizeChange (size) {
     if (this._initialized) {
         this._changeQueue.push('GL_UNIFORMS');
-        this._changeQueue.push('size');
+        this._changeQueue.push('u_size');
         this._changeQueue.push(size);
     }
 
@@ -495,14 +495,14 @@ Mesh.prototype.onSizeChange = function onSizeChange (size) {
 Mesh.prototype.onOpacityChange = function onOpacityChange (opacity) {
     if (this._initialized) {
         this._changeQueue.push('GL_UNIFORMS');
-        this._changeQueue.push('opacity');
+        this._changeQueue.push('u_opacity');
         this._changeQueue.push(opacity);
     }
 
     this._requestUpdate();
 };
 
-Mesh.prototype.onAddUIEvent = function onAddUIEvent (UIEvent, methods, properties) {
+Mesh.prototype.onAddUIEvent = function onAddUIEvent (UIEvent) {
     //TODO
 };
 
@@ -522,10 +522,6 @@ Mesh.prototype.init = function init () {
 };
 
 Mesh.prototype.draw = function draw () {
-    var key;
-    var i;
-    var len;
-
     this._inDraw = true;
 
     this.init();

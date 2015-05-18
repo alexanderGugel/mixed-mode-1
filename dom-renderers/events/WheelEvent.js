@@ -22,6 +22,8 @@
  * THE SOFTWARE.
  */
 
+/*jshint -W079 */
+
 'use strict';
 
 var MouseEvent = require('./MouseEvent');
@@ -51,5 +53,9 @@ function WheelEvent(ev) {
 
 WheelEvent.prototype = Object.create(MouseEvent.prototype);
 WheelEvent.prototype.constructor = WheelEvent;
+
+WheelEvent.prototype.toString = function toString () {
+    return 'WheelEvent';
+};
 
 module.exports = WheelEvent;

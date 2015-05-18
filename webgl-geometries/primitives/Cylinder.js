@@ -41,11 +41,10 @@ var GeometryHelper = require('../GeometryHelper');
  * @return {Object} constructed geometry
  */
 function Cylinder (options) {
-    var options  = options || {};
+    options  = options || {};
     var radius   = options.radius || 1;
     var detail   = options.detail || 15;
     var buffers;
-    var backface;
 
     buffers = GeometryHelper.generateParametric(
         detail,
@@ -54,16 +53,14 @@ function Cylinder (options) {
     );
 
     if (options.backface !== false) {
-        backface = GeometryHelper.createBackfaces(buffers.vertices, buffers.indices);
-        buffers.indices.push.apply(buffers.indices, backface.indices);
-        buffers.vertices.push.apply(buffers.vertices, backface.vertices);
+        GeometryHelper.addBackfaceTriangles(buffers.vertices, buffers.indices);
     }
 
     return new Geometry({
         buffers: [
-            { name: 'pos', data: buffers.vertices },
-            { name: 'texCoord', data: GeometryHelper.getSpheroidUV(buffers.vertices), size: 2 },
-            { name: 'normals', data: GeometryHelper.computeNormals(buffers.vertices, buffers.indices) },
+            { name: 'a_pos', data: buffers.vertices },
+            { name: 'a_texCoord', data: GeometryHelper.getSpheroidUV(buffers.vertices), size: 2 },
+            { name: 'a_normals', data: GeometryHelper.computeNormals(buffers.vertices, buffers.indices) },
             { name: 'indices', data: buffers.indices, size: 1 }
         ]
     });
@@ -84,6 +81,6 @@ Cylinder.generator = function generator(r, u, v, pos) {
     pos[1] = r * Math.sin(v);
     pos[0] = r * Math.cos(v);
     pos[2] = r * (-1 + u / Math.PI * 2);
-}
+};
 
 module.exports = Cylinder;

@@ -26,10 +26,10 @@
 
 'use strict';
 
-var Transform = require('./Transform');
 var Size = require('./Size');
+var Dispatch = require('./Dispatch');
+var TransformSystem = require('./TransformSystem');
 
-var TRANSFORM_PROCESSOR = new Transform();
 var SIZE_PROCESSOR = new Size();
 
 var IDENT = [
@@ -82,12 +82,12 @@ var QUAT = [0, 0, 0, 1];
  */
 function Node () {
     this._calculatedValues = {
-        transform: new Float32Array(IDENT),
         size: new Float32Array(3)
     };
 
     this._requestingUpdate = false;
     this._inUpdate = false;
+    this._transformNeedsUpdate = false;
 
     this._updateQueue = [];
     this._nextUpdateQueue = [];
@@ -195,10 +195,7 @@ Node.prototype.getId = Node.prototype.getLocation;
  * @param  {Object} payload Event object to be dispatched.
  */
 Node.prototype.emit = function emit (event, payload) {
-    var p = this.getParent();
-    // the context is its own ancestor
-    while (p !== (p = p.getParent()));
-    p.getDispatch().dispatch(event, payload);
+    Dispatch.emit(this.getLocation(), event, payload);
     return this;
 };
 
@@ -229,10 +226,11 @@ Node.prototype.getValue = function getValue () {
     };
 
     for (; i < numberOfChildren ; i++)
-        value.children[i] = this._children[i].getValue();
+        if (this._children[i] && this._children[i].getValue)
+            value.children[i] = this._children[i].getValue();
 
     for (i = 0 ; i < numberOfComponents ; i++)
-        if (this._components[i].getValue)
+        if (this._components[i] && this._components[i].getValue)
             value.components[i] = this._components[i].getValue();
 
     return value;
@@ -450,7 +448,7 @@ Node.prototype.getSize = function getSize () {
 };
 
 Node.prototype.getTransform = function getTransform () {
-    return this._calculatedValues.transform;
+    return TransformSystem.get(this.getLocation());
 };
 
 Node.prototype.getUIEvents = function getUIEvents () {
@@ -462,32 +460,29 @@ Node.prototype.addChild = function addChild (child) {
     child = child ? child : new Node();
 
     if (index === -1) {
-        index = this._freedChildIndicies.length ? this._freedChildIndicies.pop() : this._children.length;
+        index = this._freedChildIndicies.length ?
+                this._freedChildIndicies.pop() : this._children.length;
+
         this._children[index] = child;
-
-        if (this.isMounted() && child.onMount) {
-            var myId = this.getId();
-            var childId = myId + '/' + index;
-            child.onMount(this, childId);
-        }
-
     }
+
+    child.mount(this.getLocation() + '/' + index);
 
     return child;
 };
 
 Node.prototype.removeChild = function removeChild (child) {
     var index = this._children.indexOf(child);
-    var added = index !== -1;
-    if (added) {
+
+    if (index > - 1) {
         this._freedChildIndicies.push(index);
 
         this._children[index] = null;
+ 
+        child.dismount();
 
-        if (this.isMounted() && child.onDismount)
-            child.onDismount();
-    }
-    return added;
+        return true;
+    } else throw new Error('Node is not a child of this node');
 };
 
 /**
@@ -561,7 +556,7 @@ Node.prototype.addUIEvent = function addUIEvent (eventName) {
         UIEvents.push(eventName);
         for (var i = 0, len = components.length ; i < len ; i++) {
             component = components[i];
-            if (component.onAddUIEvent) component.onAddUIEvent(eventName);
+            if (component && component.onAddUIEvent) component.onAddUIEvent(eventName);
         }
     }
     return added;
@@ -584,6 +579,11 @@ Node.prototype._vecOptionalSet = function _vecOptionalSet (vec, index, val) {
 };
 
 Node.prototype.show = function show () {
+    Dispatch.show(this.getLocation());
+    return this;
+};
+
+Node.prototype.onShow = function onShow () {
     var i = 0;
     var items = this._components;
     var len = items.length;
@@ -595,16 +595,6 @@ Node.prototype.show = function show () {
         item = items[i];
         if (item && item.onShow) item.onShow();
     }
-
-    i = 0;
-    items = this._children;
-    len = items.length;
-
-    for (; i < len ; i++) {
-        item = items[i];
-        if (item && item.onParentShow) item.onParentShow();
-    }
-    return this;
 };
 
 Node.prototype.hide = function hide () {
@@ -724,6 +714,7 @@ Node.prototype.setPosition = function setPosition (x, y, z) {
             item = list[i];
             if (item && item.onPositionChange) item.onPositionChange(x, y, z);
         }
+        this._transformNeedsUpdate = true;
     }
 
     return this;
@@ -812,6 +803,7 @@ Node.prototype.setRotation = function setRotation (x, y, z, w) {
             item = list[i];
             if (item && item.onRotationChange) item.onRotationChange(x, y, z, w);
         }
+        this._transformNeedsUpdate = true;
     }
     return this;
 };
@@ -836,6 +828,7 @@ Node.prototype.setScale = function setScale (x, y, z) {
             item = list[i];
             if (item && item.onScaleChange) item.onScaleChange(x, y, z);
         }
+        this._transformNeedsUpdate = true;
     }
     return this;
 };
@@ -926,7 +919,7 @@ Node.prototype._resolveSizeMode = function _resolveSizeMode (vec, index, val) {
         }
     }
     else return this._vecOptionalSet(vec, index, val);
-}
+};
 
 /**
  * A proportional size defines the node's dimensions relative to its parents
@@ -1036,7 +1029,7 @@ Node.prototype.setAbsoluteSize = function setAbsoluteSize (x, y, z) {
     return this;
 };
 
-Node.prototype._transformChanged = function _transformChanged (transform) {
+Node.prototype.onTransformChange = function onTransformChange (transform) {
     var i = 0;
     var items = this._components;
     var len = items.length;
@@ -1045,15 +1038,6 @@ Node.prototype._transformChanged = function _transformChanged (transform) {
     for (; i < len ; i++) {
         item = items[i];
         if (item && item.onTransformChange) item.onTransformChange(transform);
-    }
-
-    i = 0;
-    items = this._children;
-    len = items.length;
-
-    for (; i < len ; i++) {
-        item = items[i];
-        if (item && item.onParentTransformChange) item.onParentTransformChange(transform);
     }
 };
 
@@ -1116,16 +1100,14 @@ Node.prototype.update = function update (time){
         if (item && item.onUpdate) item.onUpdate(time);
     }
 
-    var mySize = this.getSize();
-    var myTransform = this.getTransform();
-    var parent = this.getParent();
-    var parentSize = parent.getSize();
-    var parentTransform = parent.getTransform();
-    var sizeChanged = SIZE_PROCESSOR.fromSpecWithParent(parentSize, this, mySize);
+    var sizeChanged = SIZE_PROCESSOR.fromSpecWithParent(this.getParent().getSize(), this, this.getSize());
 
-    var transformChanged = TRANSFORM_PROCESSOR.fromSpecWithParent(parentTransform, this.value, mySize, parentSize, myTransform);
-    if (transformChanged) this._transformChanged(myTransform);
-    if (sizeChanged) this._sizeChanged(mySize);
+    if (sizeChanged) this._sizeChanged(this.getSize());
+
+    if (sizeChanged || this._transformNeedsUpdate) {
+        TransformSystem.update();
+        this._transformNeedsUpdate = false;
+    }
 
     this._inUpdate = false;
     this._requestingUpdate = false;
@@ -1149,11 +1131,15 @@ Node.prototype.update = function update (time){
  *
  * @method mount
  *
- * @param  {Node} parent    parent node
  * @param  {String} myId    path to node (e.g. `body/0/1`)
  */
-Node.prototype.mount = function mount (parent, myId) {
-    if (this.isMounted()) return;
+Node.prototype.mount = function mount (path) {
+    if (this.isMounted())
+        throw new Error('Node is already mounted at: ' + this.getLocation());
+    Dispatch.registerNodeAtPath(path, this);
+};
+
+Node.prototype.onMount = function onMount (parent, path) {
     var i = 0;
     var list = this._components;
     var len = list.length;
@@ -1161,21 +1147,15 @@ Node.prototype.mount = function mount (parent, myId) {
 
     this._parent = parent;
     this._globalUpdater = parent.getUpdater();
-    this.value.location = myId;
+    this.value.location = path;
     this.value.showState.mounted = true;
 
     for (; i < len ; i++) {
         item = list[i];
-        if (item.onMount) item.onMount(this, i);
+        if (item && item.onMount) item.onMount(this, i);
     }
 
-    i = 0;
-    list = this._children;
-    len = list.length;
-    for (; i < len ; i++) {
-        item = list[i];
-        if (item.onParentMount) item.onParentMount(this, myId, i);
-    }
+    TransformSystem.registerTransformAtPath(path);
 
     if (this._requestingUpdate) this._requestUpdate(true);
     return this;
@@ -1188,7 +1168,12 @@ Node.prototype.mount = function mount (parent, myId) {
  * @method dismount
  */
 Node.prototype.dismount = function dismount () {
-    if (!this.isMounted()) return;
+    if (!this.isMounted()) 
+        throw new Error('Node is not mounted');
+    Dispatch.deregisterNodeAtPath(this.getLocation(), this);
+};
+
+Node.prototype.onDismount = function onDismount () {
     var i = 0;
     var list = this._components;
     var len = list.length;
@@ -1200,43 +1185,11 @@ Node.prototype.dismount = function dismount () {
 
     for (; i < len ; i++) {
         item = list[i];
-        if (item.onDismount) item.onDismount();
-    }
-
-    i = 0;
-    list = this._children;
-    len = list.length;
-    for (; i < len ; i++) {
-        item = list[i];
-        if (item.onParentDismount) item.onParentDismount();
+        if (item && item.onDismount) item.onDismount();
     }
 
     if (!this._requestingUpdate) this._requestUpdate();
     return this;
-};
-
-/**
- * Function to be invoked by the parent as soon as the parent is
- * being mounted.
- *
- * @method onParentMount
- *
- * @param  {Node} parent        The parent node.
- * @param  {String} parentId    The parent id (path to parent).
- * @param  {Number} index       Id the node should be mounted to.
- */
-Node.prototype.onParentMount = function onParentMount (parent, parentId, index) {
-    return this.mount(parent, parentId + '/' + index);
-};
-
-/**
- * Function to be invoked by the parent as soon as the parent is being
- * unmounted.
- *
- * @method onParentDismount
- */
-Node.prototype.onParentDismount = function onParentDismount () {
-    return this.dismount();
 };
 
 /**
@@ -1274,14 +1227,6 @@ Node.prototype.onParentHide = Node.prototype.hide;
 Node.prototype.onParentTransformChange = Node.prototype._requestUpdateWithoutArgs;
 
 Node.prototype.onParentSizeChange = Node.prototype._requestUpdateWithoutArgs;
-
-Node.prototype.onShow = Node.prototype.show;
-
-Node.prototype.onHide = Node.prototype.hide;
-
-Node.prototype.onMount = Node.prototype.mount;
-
-Node.prototype.onDismount = Node.prototype.dismount;
 
 Node.prototype.onReceive = Node.prototype.receive;
 

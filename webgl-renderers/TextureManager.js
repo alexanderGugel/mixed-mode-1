@@ -24,8 +24,7 @@
 'use strict';
 
 var Texture = require('./Texture');
-var Checkerboard = require('./Checkerboard');
-var Clock = null;
+var createCheckerboard = require('./createCheckerboard');
 
 /**
  * Handles loading, binding, and resampling of textures for WebGLRenderer.
@@ -36,25 +35,33 @@ var Clock = null;
  * @param {WebGL_Context} gl Context used to create and bind textures.
  */
 function TextureManager(gl) {
-    Clock = Clock || require('../core/FamousEngine').getClock();
     this.registry = [];
     this._needsResample = [];
 
     this._activeTexture = 0;
-    this._boundTexture;
+    this._boundTexture = null;
+    
+    this._checkerboard = createCheckerboard();
 
     this.gl = gl;
 }
 
-TextureManager.prototype.update = function update() {
-    var time = Clock.getTime();
+/**
+ * Update function used by WebGLRenderer to queue resamples on 
+ * registered textures.
+ *
+ * @method update
+ *
+ * @param {Number} time Time in milliseconds according to the compositor.
+ */
+TextureManager.prototype.update = function update(time) {
     var registryLength = this.registry.length;
 
     for (var i = 1; i < registryLength; i++) {
         var texture = this.registry[i];
 
         if (texture && texture.isLoaded && texture.resampleRate) {
-            if (time - texture.lastResample > texture.resampleRate) {
+            if (!texture.lastResample || time - texture.lastResample > texture.resampleRate) {
                 if (!this._needsResample[texture.id]) {
                     this._needsResample[texture.id] = true;
                     texture.lastResample = time;
@@ -62,26 +69,48 @@ TextureManager.prototype.update = function update() {
             }
         }
     }
-}
+};
 
+/**
+ * Creates a spec and creates a texture based on given texture data.
+ * Handles loading assets if necessary.
+ *
+ * @method register
+ *
+ * @param {Object} input Object containing texture id, texture data
+ * and options used to draw texture.
+ * @param {Number} slot Texture slot to bind generated texture to.
+ */
 TextureManager.prototype.register = function register(input, slot) {
     var source = input.data;
     var textureId = input.id;
     var options = input.options || {};
     var texture = this.registry[textureId];
-    var isLoaded = false;
+    var spec;
 
     if (!texture) {
 
         texture = new Texture(this.gl, options);
-        texture.setImage(Checkerboard);
+        texture.setImage(this._checkerboard);
+
+        // Add texture to registry
+
+        spec = this.registry[textureId] = {
+            resampleRate: options.resampleRate || null,
+            lastResample: null,
+            isLoaded: false,
+            texture: texture,
+            source: source,
+            id: textureId,
+            slot: slot
+        };
 
         // Handle array
 
         if (Array.isArray(source) || source instanceof Uint8Array || source instanceof Float32Array) {
             this.bindTexture(textureId);
             texture.setArray(source);
-            isLoaded = true;
+            spec.isLoaded = true;
         }
 
         // Handle video
@@ -91,10 +120,9 @@ TextureManager.prototype.register = function register(input, slot) {
                 this.bindTexture(textureId);
                 texture.setImage(source);
 
-                this.registry[textureId].isLoaded = true;
-                this.registry[textureId].source = source;
+                spec.isLoaded = true;
+                spec.source = source;
             }.bind(this));
-
         }
 
         // Handle image url
@@ -104,26 +132,14 @@ TextureManager.prototype.register = function register(input, slot) {
                 this.bindTexture(textureId);
                 texture.setImage(img);
 
-                this.registry[textureId].isLoaded = true;
-                this.registry[textureId].source = img;
+                spec.isLoaded = true;
+                spec.source = img;
             }.bind(this));
-        }
-
-        // Add texture to registry
-
-        this.registry[textureId] = {
-            resampleRate: options.resampleRate || null,
-            lastResample: Clock.getTime(),
-            isLoaded: isLoaded,
-            texture: texture,
-            source: source,
-            id: textureId,
-            slot: slot
         }
     }
 
     return textureId;
-}
+};
 
 /**
  * Loads an image from a string or Image object and executes a callback function.
@@ -148,6 +164,14 @@ function loadImage (input, callback) {
     return image;
 }
 
+/**
+ * Sets active texture slot and binds target texture.  Also handles 
+ * resampling when necessary.
+ *
+ * @method bindTexture
+ *
+ * @param {Number} id Identifier used to retreive texture spec.
+ */
 TextureManager.prototype.bindTexture = function bindTexture(id) {
     var spec = this.registry[id];
 
@@ -168,6 +192,6 @@ TextureManager.prototype.bindTexture = function bindTexture(id) {
         spec.texture.setImage(spec.source);
         this._needsResample[spec.id] = false;
     }
-}
+};
 
 module.exports = TextureManager;
