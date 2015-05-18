@@ -25,7 +25,7 @@
 'use strict';
 
 var clone = require('../utilities/clone');
-var keyValueToArrays = require('../utilities/keyValueToArrays');
+var keyValueToArrays = require('../utilities/keyValueToArrays')
 
 var vertexWrapper = require('../webgl-shaders').vertex;
 var fragmentWrapper = require('../webgl-shaders').fragment;
@@ -47,59 +47,59 @@ var TYPES = {
 };
 
 var inputTypes = {
-    u_baseColor: 'vec4',
-    u_normals: 'vert',
-    u_glossiness: 'vec4',
-    u_positionOffset: 'vert'
+    baseColor: 'vec4',
+    u_Normals: 'vert',
+    glossiness: 'vec4',
+    metalness: 'float',
+    positionOffset: 'vert'
 };
 
 var masks =  {
     vert: 1,
     vec3: 2,
-    vec4: 4,
-    float: 8
+    float: 4
 };
 
 /**
  * Uniform keys and values
  */
 var uniforms = keyValueToArrays({
-    u_perspective: identityMatrix,
-    u_view: identityMatrix,
-    u_resolution: [0, 0, 0],
-    u_transform: identityMatrix,
-    u_size: [1, 1, 1],
-    u_time: 0,
-    u_opacity: 1,
-    u_metalness: 0,
-    u_glossiness: [0, 0, 0, 0],
-    u_baseColor: [1, 1, 1, 1],
-    u_normals: [1, 1, 1],
-    u_positionOffset: [0, 0, 0],
-    u_lightPosition: identityMatrix,
-    u_lightColor: identityMatrix,
-    u_ambientLight: [0, 0, 0],
-    u_flatShading: 0,
-    u_numLights: 0
+    perspective: identityMatrix,
+    view: identityMatrix,
+    resolution: [0, 0, 0],
+    transform: identityMatrix,
+    size: [1, 1, 1],
+    time: [0],
+    opacity: [1],
+    metalness: [0],
+    glossiness: [0, 0, 0, 0],
+    baseColor: [1, 1, 1, 1],
+    u_Normals: [1, 1, 1],
+    positionOffset: [0, 0, 0],
+    u_LightPosition: identityMatrix,
+    u_LightColor: identityMatrix,
+    u_AmbientLight: [0, 0, 0],
+    u_FlatShading: [0],
+    u_NumLights: [0]
 });
 
 /**
  * Attributes keys and values
  */
 var attributes = keyValueToArrays({
-    a_pos: [0, 0, 0],
-    a_texCoord: [0, 0],
-    a_normals: [0, 0, 0]
+    pos: [0, 0, 0],
+    texCoord: [0, 0],
+    normals: [0, 0, 0]
 });
 
 /**
  * Varyings keys and values
  */
 var varyings = keyValueToArrays({
-    v_textureCoordinate: [0, 0],
-    v_normal: [0, 0, 0],
-    v_position: [0, 0, 0],
-    v_eyeVector: [0, 0, 0]
+    v_TextureCoordinate: [0, 0],
+    v_Normal: [0, 0, 0],
+    v_Position: [0, 0, 0],
+    v_EyeVector: [0, 0, 0]
 });
 
 /**
@@ -121,7 +121,6 @@ function Program(gl, options) {
     this.registeredMaterials = {};
     this.flaggedUniforms = [];
     this.cachedUniforms  = {};
-    this.uniformTypes = [];
 
     this.definitionVec4 = [];
     this.definitionVec3 = [];
@@ -153,23 +152,21 @@ Program.prototype.registerMaterial = function registerMaterial(name, material) {
 
     if ((this.registeredMaterials[material._id] & mask) === mask) return;
 
-    var k;
-
-    for (k in compiled.uniforms) {
+    for (var k in compiled.uniforms) {
         if (uniforms.keys.indexOf(k) === -1) {
             uniforms.keys.push(k);
             uniforms.values.push(compiled.uniforms[k]);
         }
     }
 
-    for (k in compiled.varyings) {
+    for (var k in compiled.varyings) {
         if (varyings.keys.indexOf(k) === -1) {
             varyings.keys.push(k);
             varyings.values.push(compiled.varyings[k]);
         }
     }
 
-    for (k in compiled.attributes) {
+    for (var k in compiled.attributes) {
         if (attributes.keys.indexOf(k) === -1) {
             attributes.keys.push(k);
             attributes.values.push(compiled.attributes[k]);
@@ -178,25 +175,25 @@ Program.prototype.registerMaterial = function registerMaterial(name, material) {
 
     this.registeredMaterials[material._id] |= mask;
 
-    if (type === 'float') {
+    if (type == 'float') {
         this.definitionFloat.push(material.defines);
         this.definitionFloat.push('float fa_' + material._id + '() {\n '  + compiled.glsl + ' \n}');
         this.applicationFloat.push('if (int(abs(ID)) == ' + material._id + ') return fa_' + material._id  + '();');
     }
 
-    if (type === 'vec3') {
+    if (type == 'vec3') {
         this.definitionVec3.push(material.defines);
         this.definitionVec3.push('vec3 fa_' + material._id + '() {\n '  + compiled.glsl + ' \n}');
         this.applicationVec3.push('if (int(abs(ID.x)) == ' + material._id + ') return fa_' + material._id + '();');
     }
 
-    if (type === 'vec4') {
+    if (type == 'vec4') {
         this.definitionVec4.push(material.defines);
         this.definitionVec4.push('vec4 fa_' + material._id + '() {\n '  + compiled.glsl + ' \n}');
         this.applicationVec4.push('if (int(abs(ID.x)) == ' + material._id + ') return fa_' + material._id + '();');
     }
 
-    if (type === 'vert') {
+    if (type == 'vert') {
         this.definitionVert.push(material.defines);
         this.definitionVert.push('vec3 fa_' + material._id + '() {\n '  + compiled.glsl + ' \n}');
         this.applicationVert.push('if (int(abs(ID.x)) == ' + material._id + ') return fa_' + material._id + '();');
@@ -217,20 +214,25 @@ Program.prototype.registerMaterial = function registerMaterial(name, material) {
  * @return {Program} Current program.
  */
 Program.prototype.resetProgram = function resetProgram() {
+    var vsChunkDefines = [];
+    var vsChunkApplies = [];
+    var fsChunkDefines = [];
+    var fsChunkApplies = [];
+
     var vertexHeader = [header];
     var fragmentHeader = [header];
 
     var fragmentSource;
     var vertexSource;
+    var material;
     var program;
+    var chunk;
     var name;
     var value;
     var i;
 
     this.uniformLocations   = [];
     this.attributeLocations = {};
-
-    this.uniformTypes = {};
 
     this.attributeNames = clone(attributes.keys);
     this.attributeValues = clone(attributes.values);
@@ -244,10 +246,10 @@ Program.prototype.resetProgram = function resetProgram() {
     this.flaggedUniforms = [];
     this.cachedUniforms = {};
 
-    fragmentHeader.push('uniform sampler2D u_textures[7];\n');
+    fragmentHeader.push('uniform sampler2D u_Textures[7];\n');
 
     if (this.applicationVert.length) {
-        vertexHeader.push('uniform sampler2D u_textures[7];\n');
+        vertexHeader.push('uniform sampler2D u_Textures[7];\n');
     }
 
     for(i = 0; i < this.uniformNames.length; i++) {
@@ -304,7 +306,7 @@ Program.prototype.resetProgram = function resetProgram() {
 
     this.setUniforms(this.uniformNames, this.uniformValues);
 
-    var textureLocation = this.gl.getUniformLocation(this.program, 'u_textures[0]');
+    var textureLocation = this.gl.getUniformLocation(this.program, 'u_Textures[0]');
     this.gl.uniform1iv(textureLocation, [0, 1, 2, 3, 4, 5, 6]);
 
     return this;
@@ -319,7 +321,6 @@ Program.prototype.resetProgram = function resetProgram() {
  *
  * @param {String} targetName Key of uniform spec being evaluated.
  * @param {Number|Array} value Value of uniform spec being evaluated.
- *
  * @return {Boolean} Value indicating whether the uniform being set
  * is cached.
  */
@@ -372,6 +373,7 @@ Program.prototype.setUniforms = function (uniformNames, uniformValue) {
     var location;
     var value;
     var name;
+    var flag;
     var len;
     var i;
 
@@ -399,52 +401,25 @@ Program.prototype.setUniforms = function (uniformNames, uniformValue) {
         // Determine the correct function and pass the uniform
         // value to WebGL.
 
-        if (!this.uniformTypes[name]) {
-            this.uniformTypes[name] = this.getUniformTypeFromValue(value);
+        if (Array.isArray(value) || value instanceof Float32Array) {
+            switch (value.length) {
+                case 4:  gl.uniform4fv(location, value); break;
+                case 3:  gl.uniform3fv(location, value); break;
+                case 2:  gl.uniform2fv(location, value); break;
+                case 16: gl.uniformMatrix4fv(location, false, value); break;
+                case 1:  gl.uniform1fv(location, value); break;
+                case 9:  gl.uniformMatrix3fv(location, false, value); break;
+                default: throw 'cant load uniform "' + name + '" with value:' + JSON.stringify(value);
+            }
         }
-
-        // Call uniform setter function on WebGL context with correct value
-
-        switch (this.uniformTypes[name]) {
-            case 'uniform4fv':  gl.uniform4fv(location, value); break;
-            case 'uniform3fv':  gl.uniform3fv(location, value); break;
-            case 'uniform2fv':  gl.uniform2fv(location, value); break;
-            case 'uniform1fv':  gl.uniform1fv(location, value); break;
-            case 'uniform1f' :  gl.uniform1f(location, value); break;
-            case 'uniformMatrix3fv': gl.uniformMatrix3fv(location, false, value); break;
-            case 'uniformMatrix4fv': gl.uniformMatrix4fv(location, false, value); break;
+        else if (! isNaN(parseFloat(value)) && isFinite(value)) {
+            gl.uniform1f(location, value);
+        }
+        else {
+            throw 'set uniform "' + name + '" to invalid type :' + value;
         }
     }
-
     return this;
-};
-
-/**
- * Infers uniform setter function to be called on the WebGL context, based
- * on an input value.
- *
- * @method getUniformTypeFromValue
- *
- * @param {Number | Array} value Value from which uniform type is inferred.
- *
- * @return {String} Name of uniform function for given value.
- */
-Program.prototype.getUniformTypeFromValue = function getUniformTypeFromValue(value) {
-    if (Array.isArray(value) || value instanceof Float32Array) {
-        switch (value.length) {
-            case 1:  return 'uniform1fv';
-            case 2:  return 'uniform2fv';
-            case 3:  return 'uniform3fv';
-            case 4:  return 'uniform4fv';
-            case 9:  return 'uniformMatrix3fv';
-            case 16: return 'uniformMatrix4fv';
-        }
-    }
-    else if (!isNaN(parseFloat(value)) && isFinite(value)) {
-        return 'uniform1f';
-    }
-    
-    throw 'cant load uniform "' + name + '" with value:' + JSON.stringify(value);
 };
 
 /**

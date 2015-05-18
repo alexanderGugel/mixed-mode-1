@@ -27,18 +27,9 @@
 var polyfills = require('../polyfills');
 var rAF = polyfills.requestAnimationFrame;
 var cAF = polyfills.cancelAnimationFrame;
+var now = require('./now');
 
-/**
- * Boolean constant indicating whether the Engine has access to the document.
- * The document is being used in order to subscribe for visibilitychange events
- * used for normalizing the Engine time when e.g. when switching tabs.
- * 
- * @constant
- * @type {Boolean}
- */ 
-var DOCUMENT_ACCESS = typeof document !== 'undefined';
-
-if (DOCUMENT_ACCESS) {
+if (typeof document !== 'undefined') {
     var VENDOR_HIDDEN, VENDOR_VISIBILITY_CHANGE;
 
     // Opera 12.10 and Firefox 18 and later support
@@ -70,76 +61,36 @@ if (DOCUMENT_ACCESS) {
  * @constructor
  */
 function Engine() {
-    var _this = this;
-    
-    // References to objects to be updated on next frame.
     this._updates = [];
-    
+    var _this = this;
     this._looper = function(time) {
         _this.loop(time);
     };
-    this._time = 0;
-    this._stoppedAt = 0;
+    this._stoppedAt = now();
     this._sleep = 0;
-    
-    // Indicates whether the engine should be restarted when the tab/ window is
-    // being focused again (visibility change).
     this._startOnVisibilityChange = true;
-    
-    // requestId as returned by requestAnimationFrame function;
     this._rAF = null;
-    
-    this._sleepDiff = true;
-    
-    // The engine is being started on instantiation.
-    // TODO(alexanderGugel)
     this.start();
 
-    // The Engine supports running in a non-browser environment (e.g. Worker).
-    if (DOCUMENT_ACCESS) {
+    if (typeof document !== 'undefined') {
         document.addEventListener(VENDOR_VISIBILITY_CHANGE, function() {
-            _this._onVisibilityChange();
+            if (document[VENDOR_HIDDEN]) {
+                cAF(this._rAF);
+                var startOnVisibilityChange = _this._startOnVisibilityChange;
+                _this.stop();
+                _this._startOnVisibilityChange = startOnVisibilityChange;
+            }
+            else {
+                if (_this._startOnVisibilityChange) {
+                    _this.start();
+                }
+            }
         });
     }
 }
 
-Engine.prototype._onVisibilityChange = function _onVisibilityChange() {
-    if (document[VENDOR_HIDDEN]) {
-        this._onUnfocus();
-    }
-    else {
-        this._onFocus();
-    }
-};
-
 /**
- * Internal helper function to be invoked as soon as the window/ tab is being
- * focused after a visibiltiy change.
- * 
- * @method  _onFocus
- * @private
- */ 
-Engine.prototype._onFocus = function _onFocus() {
-    if (this._startOnVisibilityChange) {
-        this._start();
-    }
-};
-
-/**
- * Internal helper function to be invoked as soon as the window/ tab is being
- * unfocused (hidden) after a visibiltiy change.
- * 
- * @method  _onFocus
- * @private
- */ 
-Engine.prototype._onUnfocus = function _onUnfocus() {
-    this._stop();
-};
-
-/**
- * Starts the Engine. When switching to a differnt tab/ window (changing the
- * visibiltiy), the engine will be retarted when switching back to a visible
- * state.
+ * Starts the Engine.
  *
  * @method start
  * @chainable
@@ -149,22 +100,11 @@ Engine.prototype._onUnfocus = function _onUnfocus() {
 Engine.prototype.start = function start() {
     if (!this._running) {
         this._startOnVisibilityChange = true;
-        this._start();
+        this._running = true;
+        this._sleep += now() - this._stoppedAt;
+        this._rAF = rAF(this._looper);
     }
     return this;
-};
-
-/**
- * Internal version of {@link Engine#start}, not affecting behavior on visibilty
- * change.
- * 
- * @method  _start
- * @private
- */ 
-Engine.prototype._start = function _start() {
-    this._running = true;
-    this._sleepDiff = true;
-    this._rAF = rAF(this._looper);
 };
 
 /**
@@ -178,24 +118,11 @@ Engine.prototype._start = function _start() {
 Engine.prototype.stop = function stop() {
     if (this._running) {
         this._startOnVisibilityChange = false;
-        this._stop();
+        this._running = false;
+        this._stoppedAt = now();
+        cAF(this._rAF);
     }
     return this;
-};
-
-/**
- * Internal version of {@link Engine#stop}, not affecting behavior on visibilty
- * change.
- * 
- * @method  _stop
- * @private
- */ 
-Engine.prototype._stop = function _stop() {
-    this._running = false;
-    this._stoppedAt = this._time;
-
-    // Bug in old versions of Fx. Explicitly cancel.
-    cAF(this._rAF);
 };
 
 /**
@@ -221,17 +148,8 @@ Engine.prototype.isRunning = function isRunning() {
  * @return {Engine}      this
  */
 Engine.prototype.step = function step (time) {
-    this._time = time;
-    if (this._sleepDiff) {
-        this._sleep += time - this._stoppedAt;
-        this._sleepDiff = false;
-    }
-    
-    // The same timetamp will be emitted immediately before and after visibility
-    // change.
-    var normalizedTime = time - this._sleep;
     for (var i = 0, len = this._updates.length ; i < len ; i++) {
-        this._updates[i].update(normalizedTime);
+        this._updates[i].update(time);
     }
     return this;
 };
@@ -248,7 +166,7 @@ Engine.prototype.step = function step (time) {
  * @return {Engine}      this
  */
 Engine.prototype.loop = function loop(time) {
-    this.step(time);
+    this.step(time - this._sleep);
     this._rAF = rAF(this._looper);
     return this;
 };

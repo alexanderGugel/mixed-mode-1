@@ -29,7 +29,7 @@ var math = require('./Math');
 var vendorPrefix = require('../utilities/vendorPrefix');
 var eventMap = require('./events/EventMap');
 
-var TRANSFORM = null;
+var TRANSFORM = vendorPrefix('transform');
 
 /**
  * DOMRenderer is a class responsible for adding elements
@@ -45,9 +45,6 @@ var TRANSFORM = null;
  * @param {Compositor}
  */
 function DOMRenderer (element, selector, compositor) {
-    element.classList.add('famous-dom-renderer');
-    
-    TRANSFORM = TRANSFORM || vendorPrefix('transform');
     this._compositor = compositor; // a reference to the compositor
 
     this._target = null; // a register for holding the current
@@ -70,10 +67,7 @@ function DOMRenderer (element, selector, compositor) {
                                                       // renderer is responsible
                                                       // for
 
-    var _this = this;
-    this._boundTriggerEvent = function(type, ev) {
-        _this._triggerEvent(type, ev);
-    };
+    this._boundTriggerEvent = this._triggerEvent.bind(this);
 
     this._selector = selector;
 
@@ -130,37 +124,25 @@ DOMRenderer.prototype.subscribe = function subscribe(type, preventDefault) {
  * @param  {Event} ev  DOM Event payload.
  */
 DOMRenderer.prototype._triggerEvent = function _triggerEvent(ev) {
-    // Use ev.path, which is an array of Elements (polyfilled if needed).
     var evPath = ev.path ? ev.path : _getPath(ev);
-    // First element in the path is the element on which the event has actually
-    // been emitted.
     for (var i = 0; i < evPath.length; i++) {
-        // Skip nodes that don't have a dataset property or data-fa-path
-        // attribute.
         if (!evPath[i].dataset) continue;
         var path = evPath[i].dataset.faPath;
         if (!path) continue;
         
-        // Stop further event propogation and path traversal as soon as the
-        // first ElementCache subscribing for the emitted event has been found.
         if (this._elements[path].subscribe[ev.type]) {
             ev.stopPropagation();
 
-            // Optionally preventDefault. This needs forther consideration and
-            // should be optional. Eventually this should be a separate command/
-            // method.
             if (this._elements[path].preventDefault[ev.type]) {
                 ev.preventDefault();
             }
-
-            var NormalizedEventConstructor = eventMap[ev.type][0];
-
-            // Finally send the event to the Worker Thread through the
-            // compositor.
-            this._compositor.sendEvent(path, ev.type, new NormalizedEventConstructor(ev));
-
-            break;
+    
+            var normalizedEvent = eventMap[ev.type][0];
+            normalizedEvent.proxy(ev);
+            this._compositor.sendEvent(path, ev.type, normalizedEvent);
         }
+        
+        break;
     }
 };
 
@@ -176,8 +158,8 @@ DOMRenderer.prototype._triggerEvent = function _triggerEvent(ev) {
 DOMRenderer.prototype.getSizeOf = function getSizeOf (path) {
     var element = this._elements[path];
     if (!element) return;
-
-    var res = {val: element.size};
+    element = element.element;
+    var res = {val: [element.offsetWidth, element.offsetHeight, 0]};
     this._compositor.sendEvent(path, 'resize', res);
     return res;
 };
@@ -322,6 +304,51 @@ DOMRenderer.prototype.findParent = function findParent () {
     return parent;
 };
 
+
+/**
+ * Finds all children of the currently loaded element.
+ *
+ * @method findChildren
+ * @private
+ *
+ * @param  {Array} [array]  Output-Array used for writing to (subsequently
+ *                          appending children).
+ * @return {Array}          Result
+ */
+DOMRenderer.prototype.findChildren = function findChildren (array) {
+    // TODO Optimize me.
+    this._assertPathLoaded();
+
+    var path = this._path + '/';
+    var keys = Object.keys(this._elements);
+    var i = 0;
+    var len;
+    array = array ? array : this._children;
+
+    this._children.length = 0;
+
+    while (i < keys.length) {
+        if (keys[i].indexOf(path) === -1 || keys[i] === path) keys.splice(i, 1);
+        else i++;
+    }
+    var currentPath;
+    var j = 0;
+    for (i = 0 ; i < keys.length ; i++) {
+        currentPath = keys[i];
+        for (j = 0 ; j < keys.length ; j++) {
+            if (i !== j && keys[j].indexOf(currentPath) !== -1) {
+                keys.splice(j, 1);
+                i--;
+            }
+        }
+    }
+    for (i = 0, len = keys.length ; i < len ; i++)
+        array[i] = this._elements[keys[i]];
+
+    return array;
+};
+
+
 /**
  * Used for determining the target loaded under the current path.
  *
@@ -348,36 +375,6 @@ DOMRenderer.prototype.loadPath = function loadPath (path) {
     return this._path;
 };
 
-/**
- * Finds children of a parent element that are descendents of a inserted element in the scene
- * graph. Appends those children to the inserted element.
- *
- * @method resolveChildren
- * @return {void}
- *
- * @param {HTMLElement} element the inserted element
- * @param {HTMLElement} parent the parent of the inserted element
- */
-DOMRenderer.prototype.resolveChildren = function resolveChildren (element, parent) {
-    var i = 0;
-    var childNode;
-    var path = this._path;
-    var childPath;
-
-    while ((childNode = parent.childNodes[i])) {
-        if (!childNode.dataSet) {
-            i++;
-            continue;
-        }
-        childPath = childNode.dataSet.faPath;
-        if (!childPath) {
-            i++;
-            continue;
-        }
-        if (PathUtils.isDescendentOf(childPath, parent)) element.appendChild(childNode);
-        else i++;
-    }
-};
 
 /**
  * Inserts a DOMElement at the currently loaded path, assuming no target is
@@ -392,20 +389,20 @@ DOMRenderer.prototype.insertEl = function insertEl (tagName) {
          this._target.element.tagName.toLowerCase() === tagName.toLowerCase()) {
 
         this.findParent();
+        this.findChildren();
 
         this._assertParentLoaded();
+        this._assertChildrenLoaded();
 
         if (this._target) this._parent.element.removeChild(this._target.element);
 
         this._target = new ElementCache(document.createElement(tagName), this._path);
-
-        var el = this._target.element;
-        var parent = this._parent.element;
-
-        this.resolveChildren(el, parent);
-
         this._parent.element.appendChild(this._target.element);
         this._elements[this._path] = this._target;
+
+        for (var i = 0, len = this._children.length ; i < len ; i++) {
+            this._target.element.appendChild(this._children[i].element);
+        }
     }
 };
 
@@ -426,83 +423,20 @@ DOMRenderer.prototype.setProperty = function setProperty (name, value) {
 
 /**
  * Sets the size of the currently loaded target.
- * Removes any explicit sizing constraints when passed in `false`
+ * Removes any explicit sizing constraints when passed in `true`
  * ("true-sizing").
- * 
- * Invoking setSize is equivalent to a manual invocation of `setWidth` followed
- * by `setHeight`.
  *
  * @method  setSize
  *
- * @param  {Number|false} width   Width to be set.
- * @param  {Number|false} height  Height to be set.
+ * @param  {Number|true} width   Width to be set.
+ * @param  {Number|true} height  Height to be set.
  */
 DOMRenderer.prototype.setSize = function setSize (width, height) {
     this._assertTargetLoaded();
-    
-    this.setWidth(width);
-    this.setHeight(height);
+    this._target.element.style.width = (width === false) ? '' : width + 'px';
+    this._target.element.style.height = (height === false) ? '' : height + 'px';
 };
 
-
-/**
- * Sets the width of the currently loaded ElementCache.
- * 
- * @method  setWidth
- *  
- * @param  {Number|false} width     The explicit width to be set on the
- *                                  ElementCache's target (and content) element.
- *                                  `false` removes any explicit sizing
- *                                  constraints from the underlying DOM
- *                                  Elements.
- */ 
-DOMRenderer.prototype.setWidth = function setWidth(width) {
-    this._assertTargetLoaded();
-    
-    var contentWrapper = this._target.content;
-    
-    if (width === false) {
-        this._target.explicitWidth = true;
-        if (contentWrapper) contentWrapper.style.width = '';
-        width = contentWrapper ? contentWrapper.offsetWidth : 0;
-        this._target.element.style.width = width + 'px';
-    } else {
-        this._target.explicitWidth = false;
-        if (contentWrapper) contentWrapper.style.width = width + 'px';
-        this._target.element.style.width = width + 'px';
-    }
-    
-    this._target.size[0] = width;
-};
-/**
- * Sets the height of the currently loaded ElementCache.
- * 
- * @method  setHeight
- *  
- * @param  {Number|false} height    The explicit height to be set on the
- *                                  ElementCache's target (and content) element.
- *                                  `false` removes any explicit sizing
- *                                  constraints from the underlying DOM
- *                                  Elements.
- */ 
-DOMRenderer.prototype.setHeight = function setHeight(height) {
-    this._assertTargetLoaded();
-    
-    var contentWrapper = this._target.content;
-    
-    if (height === false) {
-        this._target.explicitHeight = true;
-        if (contentWrapper) contentWrapper.style.height = '';
-        height = contentWrapper ? contentWrapper.offsetHeight : 0;
-        this._target.element.style.height = height + 'px';
-    } else {
-        this._target.explicitHeight = false;
-        if (contentWrapper) contentWrapper.style.height = height + 'px';
-        this._target.element.style.height = height + 'px';
-    }
-    
-    this._target.size[1] = height;
-};
 
 /**
  * Sets an attribute on the currently loaded target.
@@ -517,6 +451,7 @@ DOMRenderer.prototype.setAttribute = function setAttribute (name, value) {
     this._target.element.setAttribute(name, value);
 };
 
+
 /**
  * Sets the `innerHTML` content of the currently loaded target.
  *
@@ -526,21 +461,19 @@ DOMRenderer.prototype.setAttribute = function setAttribute (name, value) {
  */
 DOMRenderer.prototype.setContent = function setContent (content) {
     this._assertTargetLoaded();
-    
-    if (!this._target.content) {
-        this._target.content = document.createElement('div');
-        this._target.content.classList.add('famous-dom-element-content');
-        this._target.element.insertBefore(
-            this._target.content,
-            this._target.element.firstChild
-        );
+    this.findChildren();
+
+    var i;
+
+    // TODO Temporary solution
+    for (i = 0 ; i < this._children.length ; i++) {
+        this._target.element.removeChild(this._children[i].element);
     }
-    this._target.content.innerHTML = content;
-    
-    this.setSize(
-        this._target.explicitWidth ? false : this._target.size[0],
-        this._target.explicitHeight ? false : this._target.size[1]
-    );
+
+    this._target.element.innerHTML = content;
+
+    for (i = 0 ; i < this._children.length ; i++)
+        this._target.element.appendChild(this._children[i].element);
 };
 
 
@@ -553,8 +486,41 @@ DOMRenderer.prototype.setContent = function setContent (content) {
  * @param  {Float32Array} [transform]   World transform.
  */
 DOMRenderer.prototype.setMatrix = function setMatrix (transform) {
+    // TODO Don't multiply matrics in the first place.
     this._assertTargetLoaded();
-    this._target.element.style[TRANSFORM] = this._stringifyMatrix(transform);
+    this.findParent();
+    var worldTransform = this._target.worldTransform;
+    var changed = false;
+
+    var i;
+    var len;
+
+    if (transform)
+        for (i = 0, len = 16 ; i < len ; i++) {
+            changed = changed ? changed : worldTransform[i] === transform[i];
+            worldTransform[i] = transform[i];
+        }
+    else changed = true;
+
+    if (changed) {
+        math.invert(this._target.invertedParent, this._parent.worldTransform);
+        math.multiply(this._target.finalTransform, this._target.invertedParent, worldTransform);
+
+        // TODO: this is a temporary fix for draw commands
+        // coming in out of order
+        var children = this.findChildren([]);
+        var previousPath = this._path;
+        var previousTarget = this._target;
+        for (i = 0, len = children.length ; i < len ; i++) {
+            this._target = children[i];
+            this._path = this._target.path;
+            this.setMatrix();
+        }
+        this._path = previousPath;
+        this._target = previousTarget;
+    }
+
+    this._target.element.style[TRANSFORM] = this._stringifyMatrix(this._target.finalTransform);
 };
 
 
@@ -597,7 +563,7 @@ DOMRenderer.prototype.removeClass = function removeClass (domClass) {
  */
 DOMRenderer.prototype._stringifyMatrix = function _stringifyMatrix(m) {
     var r = 'matrix3d(';
-    
+
     r += (m[0] < 0.000001 && m[0] > -0.000001) ? '0,' : m[0] + ',';
     r += (m[1] < 0.000001 && m[1] > -0.000001) ? '0,' : m[1] + ',';
     r += (m[2] < 0.000001 && m[2] > -0.000001) ? '0,' : m[2] + ',';
@@ -613,7 +579,7 @@ DOMRenderer.prototype._stringifyMatrix = function _stringifyMatrix(m) {
     r += (m[12] < 0.000001 && m[12] > -0.000001) ? '0,' : m[12] + ',';
     r += (m[13] < 0.000001 && m[13] > -0.000001) ? '0,' : m[13] + ',';
     r += (m[14] < 0.000001 && m[14] > -0.000001) ? '0,' : m[14] + ',';
-    
+
     r += m[15] + ')';
     return r;
 };

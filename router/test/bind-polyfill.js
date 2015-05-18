@@ -24,20 +24,27 @@
 
 'use strict';
 
-// Generates a checkerboard pattern to be used as a placeholder texture while an
-// image loads over the network.
-
-function createCheckerBoard() {
-    var context = document.createElement('canvas').getContext('2d');
-    context.canvas.width = context.canvas.height = 128;
-    for (var y = 0; y < context.canvas.height; y += 16) {
-        for (var x = 0; x < context.canvas.width; x += 16) {
-            context.fillStyle = (x ^ y) & 16 ? '#FFF' : '#DDD';
-            context.fillRect(x, y, 16, 16);
-        }
+if (!Function.prototype.bind) {
+  Function.prototype.bind = function(oThis) {
+    if (typeof this !== 'function') {
+      // closest thing possible to the ECMAScript 5
+      // internal IsCallable function
+      throw new TypeError('Function.prototype.bind - what is trying to be bound is not callable');
     }
-    
-    return context.canvas;
-}
 
-module.exports = createCheckerBoard;
+    var aArgs   = Array.prototype.slice.call(arguments, 1),
+        fToBind = this,
+        fNOP    = function() {},
+        fBound  = function() {
+          return fToBind.apply(this instanceof fNOP && oThis
+                 ? this
+                 : oThis,
+                 aArgs.concat(Array.prototype.slice.call(arguments)));
+        };
+
+    fNOP.prototype = this.prototype;
+    fBound.prototype = new fNOP();
+
+    return fBound;
+  };
+}

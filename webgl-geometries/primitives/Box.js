@@ -52,7 +52,7 @@ var boxData = [
  * @return {Object} constructed geometry
  */
 function BoxGeometry(options) {
-    options = options || {};
+    var options = options || {};
 
     var vertices      = [];
     var textureCoords = [];
@@ -80,12 +80,12 @@ function BoxGeometry(options) {
 
     return new Geometry({
         buffers: [
-            { name: 'a_pos', data: vertices },
-            { name: 'a_texCoord', data: textureCoords, size: 2 },
-            { name: 'a_normals', data: normals },
+            { name: 'pos', data: vertices },
+            { name: 'texCoord', data: textureCoords, size: 2 },
+            { name: 'normals', data: normals },
             { name: 'indices', data: indices, size: 1 }
         ]
     });
-}
+};
 
 module.exports = BoxGeometry;

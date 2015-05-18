@@ -56,20 +56,23 @@ function Triangle (options) {
          0,  1, 0,
          1, -1, 0
     ];
+    var backface;
 
     while(--detail) GeometryHelper.subdivide(indices, vertices, textureCoords);
 
     if (options.backface !== false) {
-        GeometryHelper.addBackfaceTriangles(vertices, indices);
+        backface = GeometryHelper.createBackfaces(vertices, indices);
+        indices.push.apply(indices, backface.indices);
+        vertices.push.apply(vertices, backface.vertices);
     }
 
     normals = GeometryHelper.computeNormals(vertices, indices);
 
     return new Geometry({
         buffers: [
-            { name: 'a_pos', data: vertices },
-            { name: 'a_texCoord', data: textureCoords, size: 2 },
-            { name: 'a_normals', data: normals },
+            { name: 'pos', data: vertices },
+            { name: 'texCoord', data: textureCoords, size: 2 },
+            { name: 'normals', data: normals },
             { name: 'indices', data: indices, size: 1 }
         ]
     });

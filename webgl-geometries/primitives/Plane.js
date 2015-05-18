@@ -40,7 +40,7 @@ var GeometryHelper = require('../GeometryHelper');
  * @return {Object} constructed geometry
  */
 function Plane(options) {
-    options = options || {};
+    var options = options || {};
     var detailX = options.detailX || options.detail || 1;
     var detailY = options.detailY || options.detail || 1;
 
@@ -48,6 +48,8 @@ function Plane(options) {
     var textureCoords = [];
     var normals       = [];
     var indices       = [];
+
+    var backface;
 
     for (var y = 0; y <= detailY; y++) {
         var t = y / detailY;
@@ -64,21 +66,18 @@ function Plane(options) {
     }
 
     if (options.backface !== false) {
-        GeometryHelper.addBackfaceTriangles(vertices, indices);
-        
-        // duplicate texture coordinates as well
-
-        var len = textureCoords.length;
-        for (var i = 0; i < len; i++) textureCoords.push(textureCoords[i]);
+        backface = GeometryHelper.createBackfaces(vertices, indices);
+        indices.push.apply(indices, backface.indices);
+        vertices.push.apply(vertices, backface.vertices);
     }
 
     var normals = GeometryHelper.computeNormals(vertices, indices);
 
     return new Geometry({
         buffers: [
-            { name: 'a_pos', data: vertices },
-            { name: 'a_texCoord', data: textureCoords, size: 2 },
-            { name: 'a_normals', data: normals },
+            { name: 'pos', data: vertices },
+            { name: 'texCoord', data: textureCoords, size: 2 },
+            { name: 'normals', data: normals },
             { name: 'indices', data: indices, size: 1 }
         ]
     });

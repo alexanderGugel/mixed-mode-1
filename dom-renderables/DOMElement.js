@@ -1,18 +1,18 @@
 /**
  * The MIT License (MIT)
- *
+ * 
  * Copyright (c) 2015 Famous Industries Inc.
- *
+ * 
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- *
+ * 
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- *
+ * 
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -25,8 +25,6 @@
 'use strict';
 
 var CallbackStore = require('../utilities/CallbackStore');
-var TransformSystem = require('../core/TransformSystem');
-var Commands = require('../core/Commands');
 
 var RENDER_SIZE = 2;
 
@@ -59,6 +57,16 @@ var RENDER_SIZE = 2;
 function DOMElement (node, options) {
     if (!node) throw new Error('DOMElement must be instantiated on a node');
 
+    if (typeof options === 'string') {
+        console.warn(
+            'HTMLElement constructor signature changed!\n' +
+            'Pass in an options object with {tagName: ' + options + '} instead.'
+        );
+        options = {
+            tagName: options
+        };
+    }
+
     this._node = node;
     this._parent = null;
     this._children = [];
@@ -70,10 +78,12 @@ function DOMElement (node, options) {
     this._changeQueue = [];
 
     this._UIEvents = node.getUIEvents().slice(0);
-    this._classes = ['famous-dom-element'];
+    this._classes = [];
     this._requestingEventListeners = [];
-    this._styles = {};
-
+    this._styles = {
+        display: node.isShown(),
+        opacity: node.getOpacity()
+    };
     this._attributes = {};
     this._content = '';
 
@@ -84,25 +94,31 @@ function DOMElement (node, options) {
 
     this._callbacks = new CallbackStore();
 
-    this.setProperty('display', node.isShown() ? 'none' : 'block');
-    this.onOpacityChange(node.getOpacity());
+    
+    var key;
+    
+    for (key in this.constructor.DEFAULT_STYLES) {
+        this.setProperty(key, this.constructor.DEFAULT_STYLES[key]);
+    }
 
     if (!options) return;
 
-    var i;
     var key;
 
-    if (options.classes)
-        for (i = 0; i < options.classes.length; i++)
+    if (options.classes) {
+        for (var i = 0; i < options.classes.length; i++)
             this.addClass(options.classes[i]);
+    }
 
-    if (options.attributes)
+    if (options.attributes) {
         for (key in options.attributes)
             this.setAttribute(key, options.attributes[key]);
+    }
 
-    if (options.properties)
+    if (options.properties) {
         for (key in options.properties)
             this.setProperty(key, options.properties[key]);
+    }
 
     if (options.id) this.setId(options.id);
     if (options.content) this.setContent(options.content);
@@ -138,22 +154,23 @@ DOMElement.prototype.getValue = function getValue () {
  *
  * @method onUpdate
  */
-DOMElement.prototype.onUpdate = function onUpdate (time) {
+DOMElement.prototype.onUpdate = function onUpdate () {
     var node = this._node;
     var queue = this._changeQueue;
     var len = queue.length;
 
     if (len && node) {
-        node.sendDrawCommand(Commands.WITH);
+        node.sendDrawCommand('WITH');
         node.sendDrawCommand(node.getLocation());
+        node.sendDrawCommand('DOM');
 
         while (len--) node.sendDrawCommand(queue.shift());
         if (this._requestRenderSize) {
-            node.sendDrawCommand(Commands.DOM_RENDER_SIZE);
+            node.sendDrawCommand('DOM_RENDER_SIZE');
             node.sendDrawCommand(node.getLocation());
             this._requestRenderSize = false;
         }
-
+ 
     }
 
     this._requestingUpdate = false;
@@ -232,7 +249,6 @@ DOMElement.prototype.onMount = function onMount (node, id) {
     this._node = node;
     this._id = id;
     this._UIEvents = node.getUIEvents().slice(0);
-    TransformSystem.makeBreakPointAt(node.getLocation());
     this.draw();
     this.setAttribute('data-fa-path', node.getLocation());
 };
@@ -280,7 +296,7 @@ DOMElement.prototype.onHide = function onHide () {
  * @param {Boolean} usesCutout  The presence of a WebGL 'cutout' for this element.
  */
 DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
-    this._changeQueue.push(Commands.GL_CUTOUT_STATE, usesCutout);
+    this._changeQueue.push('GL_CUTOUT_STATE', usesCutout);
 
     if (this._initialized) this._requestUpdate();
 };
@@ -296,13 +312,11 @@ DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
  * @param  {Float32Array} transform     The final transform matrix.
  */
 DOMElement.prototype.onTransformChange = function onTransformChange (transform) {
-    this._changeQueue.push(Commands.CHANGE_TRANSFORM);
-    transform = transform.getLocalTransform();
-
+    this._changeQueue.push('CHANGE_TRANSFORM');
     for (var i = 0, len = transform.length ; i < len ; i++)
         this._changeQueue.push(transform[i]);
 
-    if (!this._requestingUpdate) this._requestUpdate();
+    this.onUpdate();
 };
 
 /**
@@ -319,7 +333,7 @@ DOMElement.prototype.onSizeChange = function onSizeChange (size) {
     var sizedX = sizeMode[0] !== RENDER_SIZE;
     var sizedY = sizeMode[1] !== RENDER_SIZE;
     if (this._initialized)
-        this._changeQueue.push(Commands.CHANGE_SIZE,
+        this._changeQueue.push('CHANGE_SIZE',
             sizedX ? size[0] : sizedX,
             sizedY ? size[1] : sizedY);
 
@@ -343,7 +357,7 @@ DOMElement.prototype.onOpacityChange = function onOpacityChange (opacity) {
 /**
  * Method to be invoked by the node as soon as a new UIEvent is being added.
  * This results into an `ADD_EVENT_LISTENER` command being send.
- *
+ * 
  * @param  {String} UIEvent     UIEvent to be subscribed to (e.g. `click`).
  */
 DOMElement.prototype.onAddUIEvent = function onAddUIEvent (UIEvent) {
@@ -363,7 +377,7 @@ DOMElement.prototype.onAddUIEvent = function onAddUIEvent (UIEvent) {
  */
 DOMElement.prototype._subscribe = function _subscribe (UIEvent) {
     if (this._initialized) {
-        this._changeQueue.push(Commands.SUBSCRIBE, UIEvent, true);
+        this._changeQueue.push('SUBSCRIBE', UIEvent, true);
     }
     if (!this._requestingUpdate) {
         this._requestUpdate();
@@ -405,9 +419,9 @@ DOMElement.prototype._requestUpdate = function _requestUpdate () {
  * @method init
  */
 DOMElement.prototype.init = function init () {
-    this._changeQueue.push(Commands.INIT_DOM, this._tagName);
+    this._changeQueue.push('INIT_DOM', this._tagName);
     this._initialized = true;
-    this.onTransformChange(TransformSystem.get(this._node.getLocation()));
+    this.onTransformChange(this._node.getTransform());
     this.onSizeChange(this._node.getSize());
     if (!this._requestingUpdate) this._requestUpdate();
 };
@@ -437,7 +451,7 @@ DOMElement.prototype.setId = function setId (id) {
  */
 DOMElement.prototype.addClass = function addClass (value) {
     if (this._classes.indexOf(value) < 0) {
-        if (this._initialized) this._changeQueue.push(Commands.ADD_CLASS, value);
+        if (this._initialized) this._changeQueue.push('ADD_CLASS', value);
         this._classes.push(value);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
@@ -445,7 +459,7 @@ DOMElement.prototype.addClass = function addClass (value) {
     }
 
     if (this._inDraw) {
-        if (this._initialized) this._changeQueue.push(Commands.ADD_CLASS, value);
+        if (this._initialized) this._changeQueue.push('ADD_CLASS', value);
         if (!this._requestingUpdate) this._requestUpdate();
     }
     return this;
@@ -464,26 +478,12 @@ DOMElement.prototype.removeClass = function removeClass (value) {
 
     if (index < 0) return this;
 
-    this._changeQueue.push(Commands.REMOVE_CLASS, value);
+    this._changeQueue.push('REMOVE_CLASS', value);
 
     this._classes.splice(index, 1);
 
     if (!this._requestingUpdate) this._requestUpdate();
     return this;
-};
-
-
-/**
- * Checks if the DOMElement has the passed in class.
- *
- * @method  hasClass
- *
- * @param  {String} value   The class name.
- * @return {Boolean}        Boolean value indicating whether the passed in class
- *                          name is in the DOMElement's class list.
- */
-DOMElement.prototype.hasClass = function hasClass (value) {
-    return this._classes.indexOf(value) !== -1;
 };
 
 /**
@@ -497,7 +497,7 @@ DOMElement.prototype.hasClass = function hasClass (value) {
 DOMElement.prototype.setAttribute = function setAttribute (name, value) {
     if (this._attributes[name] !== value || this._inDraw) {
         this._attributes[name] = value;
-        if (this._initialized) this._changeQueue.push(Commands.CHANGE_ATTRIBUTE, name, value);
+        if (this._initialized) this._changeQueue.push('CHANGE_ATTRIBUTE', name, value);
         if (!this._requestUpdate) this._requestUpdate();
     }
     return this;
@@ -516,7 +516,7 @@ DOMElement.prototype.setAttribute = function setAttribute (name, value) {
 DOMElement.prototype.setProperty = function setProperty (name, value) {
     if (this._styles[name] !== value || this._inDraw) {
         this._styles[name] = value;
-        if (this._initialized) this._changeQueue.push(Commands.CHANGE_PROPERTY, name, value);
+        if (this._initialized) this._changeQueue.push('CHANGE_PROPERTY', name, value);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
     }
@@ -534,7 +534,7 @@ DOMElement.prototype.setProperty = function setProperty (name, value) {
 DOMElement.prototype.setContent = function setContent (content) {
     if (this._content !== content || this._inDraw) {
         this._content = content;
-        if (this._initialized) this._changeQueue.push(Commands.CHANGE_CONTENT, content);
+        if (this._initialized) this._changeQueue.push('CHANGE_CONTENT', content);
         if (!this._requestingUpdate) this._requestUpdate();
         if (this._renderSized) this._requestRenderSize = true;
     }
@@ -613,4 +613,18 @@ DOMElement.prototype.draw = function draw () {
     this._inDraw = false;
 };
 
+DOMElement.DEFAULT_STYLES = {
+    'position': 'absolute',
+    '-webkit-transform-origin': '0% 0%',
+    'transform-origin': '0% 0%',
+    '-webkit-backface-visibility': 'visible',
+    'backface-visibility': 'visible',
+    '-webkit-transform-style': 'preserve-3d',
+    'transform-style': 'preserve-3d; /* performance *',
+    '-webkit-tap-highlight-color': 'transparent',
+    'pointer-events': 'auto',
+    'z-index': '1'
+};
+
 module.exports = DOMElement;
+

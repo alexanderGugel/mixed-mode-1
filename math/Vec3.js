@@ -97,6 +97,7 @@ Vec3.prototype.subtract = function subtract(v) {
  * @chainable
  */
 Vec3.prototype.rotateX = function rotateX(theta) {
+    var x = this.x;
     var y = this.y;
     var z = this.z;
 
@@ -118,6 +119,7 @@ Vec3.prototype.rotateX = function rotateX(theta) {
  */
 Vec3.prototype.rotateY = function rotateY(theta) {
     var x = this.x;
+    var y = this.y;
     var z = this.z;
 
     var cosTheta = cos(theta);
@@ -139,6 +141,7 @@ Vec3.prototype.rotateY = function rotateY(theta) {
 Vec3.prototype.rotateZ = function rotateZ(theta) {
     var x = this.x;
     var y = this.y;
+    var z = this.z;
 
     var cosTheta = cos(theta);
     var sinTheta = sin(theta);

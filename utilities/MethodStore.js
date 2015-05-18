@@ -24,32 +24,34 @@
 
 'use strict';
 
-var MouseEvent = require('./MouseEvent');
-
-function WheelEvent(ev) {
-    // [Constructor(DOMString typeArg, optional WheelEventInit wheelEventInitDict)]
-    // interface WheelEvent : MouseEvent {
-    //     // DeltaModeCode
-    //     const unsigned long DOM_DELTA_PIXEL = 0x00;
-    //     const unsigned long DOM_DELTA_LINE = 0x01;
-    //     const unsigned long DOM_DELTA_PAGE = 0x02;
-    //     readonly    attribute double        deltaX;
-    //     readonly    attribute double        deltaY;
-    //     readonly    attribute double        deltaZ;
-    //     readonly    attribute unsigned long deltaMode;
-    // };
-
-    MouseEvent.call(this, ev);
-    this.DOM_DELTA_PIXEL = 0x00;
-    this.DOM_DELTA_LINE = 0x01;
-    this.DOM_DELTA_PAGE = 0x02;
-    this.deltaX = ev.deltaX;
-    this.deltaY = ev.deltaY;
-    this.deltaZ = ev.deltaZ;
-    this.deltaMode = ev.deltaMode;
+function MethodStore () {
+    this._events = {};
 }
 
-WheelEvent.prototype = Object.create(MouseEvent.prototype);
-WheelEvent.prototype.constructor = WheelEvent;
+MethodStore.prototype.on = function on (key, cbclass, cbname) {
+    var events = this._events[key];
+    if (!events) events = [];
+    events.push(cbclass, cbname);
+    return this;
+}
 
-module.exports = WheelEvent;
+MethodStore.prototype.off = function off (key, cbclass) {
+    var events = this._events[key];
+    if (events) {
+        var index = events.indexOf(cbclass);
+        if (index > -1) events.splice(index, 2);
+    }
+    return this;
+}
+
+MethodStore.prototype.trigger = function trigger (key, payload) {
+    var events = this._events[key];
+    if (events) {
+        var i = 0;
+        var len = events.length;
+        for (; i < len ; i += 2) events[i][events[i + 1]](payload);
+    }
+    return this;
+};
+
+module.exports = MethodStore;
