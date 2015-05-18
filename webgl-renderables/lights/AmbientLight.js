@@ -25,6 +25,7 @@
 'use strict';
 
 var Light = require('./Light');
+var Commands = require('../../core/Commands');
 
 /**
  * AmbientLight extends the functionality of Light. It sets the ambience in
@@ -39,7 +40,7 @@ var Light = require('./Light');
  */
 function AmbientLight(node) {
     Light.call(this, node);
-    this.commands.color = 'GL_AMBIENT_LIGHT';
+    this.commands.color = Commands.GL_AMBIENT_LIGHT;
 }
 
 /**

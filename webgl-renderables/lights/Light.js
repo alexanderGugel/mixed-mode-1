@@ -24,6 +24,8 @@
 
 'use strict';
 
+var Commands = require('../../core/Commands');
+
 /**
  * The blueprint for all light components for inheriting common functionality.
  *
@@ -39,7 +41,7 @@ function Light(node) {
     this._requestingUpdate = false;
     this.queue = [];
     this._color;
-    this.commands = { color: 'GL_LIGHT_COLOR' };
+    this.commands = { color: Commands.GL_LIGHT_COLOR };
 }
 
 /**
@@ -94,7 +96,7 @@ Light.prototype.onUpdate = function onUpdate() {
     var path = this._node.getLocation();
 
     this._node
-        .sendDrawCommand('WITH')
+        .sendDrawCommand(Commands.WITH)
         .sendDrawCommand(path);
 
     var i = this.queue.length;
