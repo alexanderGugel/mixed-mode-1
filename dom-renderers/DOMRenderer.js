@@ -348,6 +348,31 @@ DOMRenderer.prototype.loadPath = function loadPath (path) {
     return this._path;
 };
 
+/**
+ * Finds children of a parent element that are descendents of a inserted element in the scene
+ * graph. Appends those children to the inserted element.
+ *
+ * @method resolveChildren
+ * @return {void}
+ *
+ * @param {HTMLElement} element the inserted element
+ * @param {HTMLElement} parent the parent of the inserted element
+ */
+DOMRenderer.prototype.resolveChildren = function resolveChildren (element, parent) {
+    var i = 0;
+    var childNode;
+    var path = this._path;
+    var childPath;
+
+    while ((childNode = parent.childNodes[i])) {
+        childPath = childNode.dataSet.faPath;
+        if (!childPath) i++;
+        if (PathUtils.isDescendentOf(childPath, parent)) element.appendChild(childNode);
+        else i++;
+    }
+}
+        
+
 
 /**
  * Inserts a DOMElement at the currently loaded path, assuming no target is
@@ -368,6 +393,11 @@ DOMRenderer.prototype.insertEl = function insertEl (tagName) {
         if (this._target) this._parent.element.removeChild(this._target.element);
 
         this._target = new ElementCache(document.createElement(tagName), this._path);
+
+        var el = this._target.element;
+        var parent = this._parent.element;
+
+        this.resolveChildren(el, parent);
 
         this._parent.element.appendChild(this._target.element);
         this._elements[this._path] = this._target;
