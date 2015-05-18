@@ -25,7 +25,6 @@
 'use strict';
 
 var Context = require('./Context');
-var Commands = require('../core/Commands');
 
 /**
  * Instantiates a new Compositor, used for routing commands received from the
@@ -38,34 +37,14 @@ function Compositor() {
     this._contexts = {};
     this._outCommands = [];
     this._inCommands = [];
-    this._time = null;
 
     this._resized = false;
 
     var _this = this;
-    window.addEventListener('resize', function() {
-        _this.onResize();
+    window.addEventListener('resize', function(ev) {
+        _this._resized = true;
     });
 }
-
-Compositor.prototype.onResize = function onResize () {
-    this._resized = true;
-    for (var selector in this._contexts) {
-        this._contexts[selector].onResize();
-    }
-};
-
-/**
- * Retrieves the time being used by the internal clock managed by
- * `FamousEngine`.
- * 
- * @method  getTime
- *  
- * @return {Number}     Clock time.
- */ 
-Compositor.prototype.getTime = function getTime() {
-    return this._time;
-};
 
 /**
  * Schedules an event to be sent to the WebWorker the next time the out command
@@ -81,7 +60,7 @@ Compositor.prototype.getTime = function getTime() {
  *                          cloning algorithm)
  */
 Compositor.prototype.sendEvent = function sendEvent(path, ev, payload) {
-    this._outCommands.push(Commands.WITH, path, Commands.TRIGGER, ev, payload);
+    this._outCommands.push('WITH', path, 'TRIGGER', ev, payload);
 };
 
 /**
@@ -112,7 +91,7 @@ Compositor.prototype.handleWith = function handleWith (iterator, commands) {
     var path = commands[iterator];
     var pathArr = path.split('/');
     var context = this.getOrSetContext(pathArr.shift());
-    return context.receive(path, commands, iterator);
+    return context.receive(pathArr, path, commands, iterator);
 };
 
 /**
@@ -129,19 +108,8 @@ Compositor.prototype.handleWith = function handleWith (iterator, commands) {
  * @return {Context}                    final VirtualElement
  */
 Compositor.prototype.getOrSetContext = function getOrSetContext(selector) {
-    if (this._contexts[selector]) {
-        return this._contexts[selector];
-    } else {
-        var el = document.querySelector(selector);
-        if (el === null) {
-            throw new Error(
-                'Invalid selector'
-            );
-        }
-        var context = new Context(el, selector, this);
-        this._contexts[selector] = context;
-        return context;
-    }
+    if (this._contexts[selector]) return this._contexts[selector];
+    else return (this._contexts[selector] = new Context(selector, this));
 };
 
 /**
@@ -175,13 +143,10 @@ Compositor.prototype.drawCommands = function drawCommands() {
     var command = commands[localIterator];
     while (command) {
         switch (command) {
-            case Commands.TIME:
-                this._time = commands[++localIterator];
-                break;
-            case Commands.WITH:
+            case 'WITH':
                 localIterator = this.handleWith(++localIterator, commands);
                 break;
-            case Commands.NEED_SIZE_FOR:
+            case 'NEED_SIZE_FOR':
                 this.giveSizeFor(++localIterator, commands);
                 break;
         }

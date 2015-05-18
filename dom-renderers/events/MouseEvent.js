@@ -21,8 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
- 
-/*jshint -W079 */
 
 'use strict';
 
@@ -68,9 +66,5 @@ function MouseEvent(ev) {
 
 MouseEvent.prototype = Object.create(UIEvent.prototype);
 MouseEvent.prototype.constructor = MouseEvent;
-
-MouseEvent.prototype.toString = function toString () {
-    return 'MouseEvent';
-};
 
 module.exports = MouseEvent;

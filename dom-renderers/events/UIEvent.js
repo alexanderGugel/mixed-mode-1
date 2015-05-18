@@ -21,8 +21,6 @@
  * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
  * THE SOFTWARE.
  */
- 
-/*jshint -W079 */
 
 'use strict';
 
@@ -41,9 +39,5 @@ function UIEvent(ev) {
 
 UIEvent.prototype = Object.create(Event.prototype);
 UIEvent.prototype.constructor = UIEvent;
-
-UIEvent.prototype.toString = function toString () {
-    return 'UIEvent';
-};
 
 module.exports = UIEvent;

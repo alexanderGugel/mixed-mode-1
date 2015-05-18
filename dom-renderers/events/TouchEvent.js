@@ -86,8 +86,4 @@ function TouchEvent(ev) {
 TouchEvent.prototype = Object.create(UIEvent.prototype);
 TouchEvent.prototype.constructor = TouchEvent;
 
-TouchEvent.prototype.toString = function toString () {
-    return 'TouchEvent';
-};
-
 module.exports = TouchEvent;

@@ -22,8 +22,6 @@
  * THE SOFTWARE.
  */
 
-'use strict';
-
 var loadURL        = require('../utilities/loadURL');
 var GeometryHelper = require('./GeometryHelper');
 
@@ -110,7 +108,7 @@ OBJLoader._onsuccess = function _onsuccess(url, options, text) {
  * @return {Object} vertex buffer data
  */
 function format(text, options) {
-    text = sanitize(text);
+    var text = sanitize(text);
 
     var lines = text.split('\n');
 
@@ -322,7 +320,7 @@ function format(text, options) {
         textureCoords: cached.texCoords,
         indices: cached.indices
     };
-}
+};
 
 /*
  * Replaces all double spaces with single spaces and removes
@@ -405,7 +403,7 @@ function cacheVertices(v, n, t, fv, fn, ft) {
         normals: outNormals,
         texCoords: outTexCoord,
         indices: outIndices
-    };
+    }
 }
 
 /*

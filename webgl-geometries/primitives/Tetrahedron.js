@@ -42,6 +42,7 @@ var GeometryHelper = require('../GeometryHelper');
 function Tetrahedron(options) {
     var textureCoords = [];
     var normals = [];
+    var geometry;
     var detail;
     var i;
     var t = Math.sqrt(3);
@@ -90,9 +91,9 @@ function Tetrahedron(options) {
 
     return new Geometry({
         buffers: [
-            { name: 'a_pos', data: vertices },
-            { name: 'a_texCoord', data: textureCoords, size: 2 },
-            { name: 'a_normals', data: normals },
+            { name: 'pos', data: vertices },
+            { name: 'texCoord', data: textureCoords, size: 2 },
+            { name: 'normals', data: normals },
             { name: 'indices', data: indices, size: 1 }
         ]
     });

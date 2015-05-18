@@ -45,8 +45,4 @@ function InputEvent(ev) {
 InputEvent.prototype = Object.create(UIEvent.prototype);
 InputEvent.prototype.constructor = InputEvent;
 
-InputEvent.prototype.toString = function toString () {
-    return 'InputEvent';
-};
-
 module.exports = InputEvent;

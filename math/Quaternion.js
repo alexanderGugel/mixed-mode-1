@@ -24,6 +24,8 @@
 
 'use strict';
 
+var Matrix = require('./Mat33');
+
 var sin = Math.sin;
 var cos = Math.cos;
 var asin = Math.asin;
@@ -344,6 +346,7 @@ Quaternion.prototype.toEuler = function toEuler(output) {
     var xx = x * x;
     var yy = y * y;
     var zz = z * z;
+    var ww = w * w;
 
     var ty = 2 * (x * z + y * w);
     ty = ty < -1 ? -1 : ty > 1 ? 1 : ty;
