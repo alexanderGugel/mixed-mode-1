@@ -72,10 +72,8 @@ function DOMElement (node, options) {
     this._UIEvents = node.getUIEvents().slice(0);
     this._classes = ['famous-dom-element'];
     this._requestingEventListeners = [];
-    this._styles = {
-        display: node.isShown(),
-        opacity: node.getOpacity()
-    };
+    this._styles = {};
+
     this._attributes = {};
     this._content = '';
 
@@ -85,9 +83,10 @@ function DOMElement (node, options) {
     this._renderSize = [0, 0, 0];
 
     this._callbacks = new CallbackStore();
-    
-    var key;
-    
+
+    this.setProperty('display', node.isShown() ? 'none' : 'block');
+    this.onOpacityChange(node.getOpacity());
+
     if (!options) return;
 
     var i;
@@ -299,7 +298,7 @@ DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
 DOMElement.prototype.onTransformChange = function onTransformChange (transform) {
     this._changeQueue.push(Commands.CHANGE_TRANSFORM);
     transform = transform.getLocalTransform();
-    
+
     for (var i = 0, len = transform.length ; i < len ; i++)
         this._changeQueue.push(transform[i]);
 

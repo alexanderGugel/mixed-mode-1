@@ -28,9 +28,27 @@ var WebGLRenderer = require('../webgl-renderers/WebGLRenderer');
 var Camera = require('../components/Camera');
 var DOMRenderer = require('../dom-renderers/DOMRenderer');
 var Commands = require('../core/Commands');
-
 require('./styles.css');
 
+/**
+ * Context is a render layer with its own WebGLRenderer and DOMRenderer.
+ * It is the interface between the Compositor which receives commands
+ * and the renderers that interpret them.  It also relays information to
+ * the renderers about resizing.
+ *
+ * The DOMElement at the given query selector is used as the root.  A
+ * new DOMElement is appended to this root element, and used as the
+ * parent element for all Famous DOM rendering at this context.  A 
+ * canvas is added and used for all WebGL rendering at this context.
+ *
+ * @class Context
+ * @constructor
+ *
+ * @param {String} selector Query selector used to locate root element of
+ * context layer.
+ * @param {Compositor} compositor Compositor reference to pass down to 
+ * WebGLRenderer.
+ */
 function Context(el, selector, compositor) {
     this._rootEl = el;
     this._selector = selector;
@@ -42,6 +60,8 @@ function Context(el, selector, compositor) {
 
     this.WebGLRenderer = null;
     this._canvasEl = null;
+
+    // State holders
 
     this._renderState = {
         projectionType: Camera.ORTHOGRAPHIC_PROJECTION,
@@ -64,6 +84,14 @@ function Context(el, selector, compositor) {
     this.onResize();
 }
 
+/**
+ * Queries DOMRenderer size and updates canvas size.  Relays size information to 
+ * WebGLRenderer.
+ *
+ * @method drawBuffers
+ *
+ * @return {Object} Current context.
+ */
 Context.prototype.onResize = function () {
     var newSize = this.DOMRenderer.getSize();
 
@@ -84,6 +112,12 @@ Context.prototype.onResize = function () {
     return this;
 };
 
+/**
+ * Draw function called after all commands have been handled for current frame.
+ * Issues draw commands to all renderers with current renderState.
+ *
+ * @method draw
+ */
 Context.prototype.draw = function draw() {
     this.DOMRenderer.draw(this._renderState);
     if (this.WebGLRenderer) this.WebGLRenderer.draw(this._renderState);
@@ -92,6 +126,11 @@ Context.prototype.draw = function draw() {
     if (this._renderState.viewDirty) this._renderState.viewDirty = false;
 };
 
+/**
+ * Gets the size of the parent element of the DOMRenderer for this context.
+ *
+ * @method getRootSize
+ */
 Context.prototype.getRootSize = function getRootSize() {
     return this.DOMRenderer.getSize();
 };
@@ -121,8 +160,15 @@ Context.prototype.initCommandCallbacks = function initCommandCallbacks () {
     this._commandCallbacks[Commands.PINHOLE_PROJECTION] = pinholeProjection;
     this._commandCallbacks[Commands.ORTHOGRAPHIC_PROJECTION] = orthographicProjection;
     this._commandCallbacks[Commands.CHANGE_VIEW_TRANSFORM] = changeViewTransform;
-}
+};
 
+/**
+ * Handles initialization of WebGLRenderer when necessary, including creation
+ * of the canvas element and instantiation of the renderer.  Also updates size
+ * to pass size information to the renderer.
+ *
+ * @method initWebGL
+ */
 Context.prototype.initWebGL = function initWebGL() {
     this._canvasEl = document.createElement('canvas');
     this._rootEl.appendChild(this._canvasEl);
@@ -130,7 +176,20 @@ Context.prototype.initWebGL = function initWebGL() {
     this.onResize();
 };
 
-Context.prototype.receive = function receive(pathArr, path, commands, iterator) {
+/**
+ * Handles delegation of commands to renderers of this context.
+ *
+ * @method receive
+ *
+ * @param {String} path String used as identifier of a given node in the
+ * scene graph.
+ * @param {Array} commands List of all commands from this frame.
+ * @param {Number} iterator Number indicating progress through the command
+ * queue.
+ *
+ * @return {Number} iterator indicating progress through the command queue.
+ */
+Context.prototype.receive = function receive(path, commands, iterator) {
     var localIterator = iterator;
 
     var command = commands[++localIterator];
@@ -376,3 +435,4 @@ function changeViewTransform (context, path, commands, iterator) {
 }
 
 module.exports = Context;
+
