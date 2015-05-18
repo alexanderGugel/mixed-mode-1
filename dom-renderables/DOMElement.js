@@ -74,13 +74,6 @@ function DOMElement (node, options) {
     this._requestingEventListeners = [];
     this._styles = {};
 
-    this.setProperty('display', node.isShown() ? 'none' : 'block');
-    this.onOpacityChange(node.getOpacity());
-
-    for (var property in this.DEFAULT_PROPERTIES) {
-        this.setProperty(property, this.DEFAULT_PROPERTIES[property]);
-    }
-
     this._attributes = {};
     this._content = '';
 
@@ -90,6 +83,9 @@ function DOMElement (node, options) {
     this._renderSize = [0, 0, 0];
 
     this._callbacks = new CallbackStore();
+
+    this.setProperty('display', node.isShown() ? 'none' : 'block');
+    this.onOpacityChange(node.getOpacity());
 
     if (!options) return;
 
@@ -302,7 +298,7 @@ DOMElement.prototype.setCutoutState = function setCutoutState (usesCutout) {
 DOMElement.prototype.onTransformChange = function onTransformChange (transform) {
     this._changeQueue.push(Commands.CHANGE_TRANSFORM);
     transform = transform.getLocalTransform();
-    
+
     for (var i = 0, len = transform.length ; i < len ; i++)
         this._changeQueue.push(transform[i]);
 
@@ -618,4 +614,3 @@ DOMElement.prototype.draw = function draw () {
 };
 
 module.exports = DOMElement;
-
