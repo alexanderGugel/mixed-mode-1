@@ -25,6 +25,7 @@
 'use strict';
 var Geometry = require('../webgl-geometries');
 var Commands = require('../core/Commands');
+var TransformSystem = require('../core/TransformSystem');
 
 /**
  * The Mesh class is responsible for providing the API for how
