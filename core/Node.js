@@ -1384,11 +1384,6 @@ Node.prototype.update = function update (time){
 
     if (sizeChanged) this._sizeChanged(this.getSize());
 
-    if (sizeChanged || this._transformNeedsUpdate) {
-        TransformSystem.update();
-        this._transformNeedsUpdate = false;
-    }
-
     this._inUpdate = false;
     this._requestingUpdate = false;
 
@@ -1463,8 +1458,6 @@ Node.prototype.dismount = function dismount () {
     var item;
 
     this.value.showState.mounted = false;
-
-    this._parent.removeChild(this);
 
     for (; i < len ; i++) {
         item = list[i];
@@ -1562,26 +1555,6 @@ Node.prototype.onParentTransformChange = Node.prototype._requestUpdateWithoutArg
  * @return {undefined} undefined
  */
 Node.prototype.onParentSizeChange = Node.prototype._requestUpdateWithoutArgs;
-
-/**
- * A method to execute logic when the node something wants
- * to show the node. Delegates to Node.show.
- *
- * @method
- *
- * @return {Node} this
- */
-Node.prototype.onShow = Node.prototype.show;
-
-/**
- * A method to execute logic when something wants to hide this
- * node. Delegates to Node.hide.
- *
- * @method
- *
- * @return {Node} this
- */
-Node.prototype.onHide = Node.prototype.hide;
 
 /**
  * A method which can execute logic when this node receives
