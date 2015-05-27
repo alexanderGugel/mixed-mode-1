@@ -29,6 +29,7 @@
 var Size = require('./Size');
 var Dispatch = require('./Dispatch');
 var TransformSystem = require('./TransformSystem');
+var OpacitySystem = require('./OpacitySystem');
 var pathUtils = require('./Path');
 
 var SIZE_PROCESSOR = new Size();
@@ -89,6 +90,7 @@ function Node () {
     this._requestingUpdate = false;
     this._inUpdate = false;
     this._transformNeedsUpdate = false;
+    this._opacityNeedsUpdate = false;
 
     this._updateQueue = [];
     this._nextUpdateQueue = [];
@@ -583,7 +585,7 @@ Node.prototype.removeChild = function removeChild (child) {
         this._freedChildIndicies.push(index);
 
         this._children[index] = null;
- 
+
         child.dismount();
 
         return true;
@@ -1087,6 +1089,8 @@ Node.prototype.setOpacity = function setOpacity (val) {
             item = list[i];
             if (item && item.onOpacityChange) item.onOpacityChange(val);
         }
+
+        this._opacityNeedsUpdate = true;
     }
     return this;
 };
@@ -1306,6 +1310,28 @@ Node.prototype.onTransformChange = function onTransformChange (transform) {
 
 /**
  * Private method for alerting all components and children that
+ * this node's opacity has changed.
+ *
+ * @method
+ *
+ * @param {Opacity} opacity The opacity that has changed
+ *
+ * @return {undefined} undefined
+ */
+Node.prototype.onOpacityChange = function onOpacityChange (opacity) {
+    var i = 0;
+    var items = this._components;
+    var len = items.length;
+    var item;
+
+    for (; i < len ; i++) {
+        item = items[i];
+        if (item && item.onOpacityChange) item.onOpacityChange(opacity);
+    }
+};
+
+/**
+ * Private method for alerting all components and children that
  * this node's size has changed.
  *
  * @method
@@ -1423,6 +1449,8 @@ Node.prototype.mount = function mount (path) {
 
     TransformSystem.registerTransformAtPath(path);
 
+    OpacitySystem.registerOpacityAtPath(path);
+
     var parent = Dispatch.getNode(pathUtils.parent(path));
     this._parent = parent;
     this._globalUpdater = parent.getUpdater();
@@ -1430,6 +1458,8 @@ Node.prototype.mount = function mount (path) {
     this.value.showState.mounted = true;
 
     TransformSystem.registerTransformAtPath(path);
+
+    OpacitySystem.registerOpacityAtPath(path);
 
     for (; i < len ; i++) {
         item = list[i];
@@ -1450,7 +1480,7 @@ Node.prototype.mount = function mount (path) {
  * @return {Node} this
  */
 Node.prototype.dismount = function dismount () {
-    if (!this.isMounted()) 
+    if (!this.isMounted())
         throw new Error('Node is not mounted');
 
     Dispatch.deregisterNodeAtPath(this.getLocation(), this);

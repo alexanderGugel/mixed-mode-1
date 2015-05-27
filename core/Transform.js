@@ -98,7 +98,7 @@ Transform.prototype.calculateWorldMatrix = function calculateWorldMatrix () {
     while (nearestBreakPoint && !nearestBreakPoint.isBreakPoint())
         nearestBreakPoint = nearestBreakPoint.parent;
 
-    if (nearestBreakPoint) return multiply(this.global, nearestBreakPoint, this.local);
+    if (nearestBreakPoint) return multiply(this.global, nearestBreakPoint.getWorldTransform(), this.local);
     else {
         for (var i = 0; i < 16 ; i++) this.global[i] = this.local[i];
         return false;
